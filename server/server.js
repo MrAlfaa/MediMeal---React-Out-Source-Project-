@@ -10,10 +10,13 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// MongoDB Atlas Connection
+// MongoDB Atlas Connection with improved error handling
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => console.log('Connected to MongoDB Atlas'))
-  .catch(err => console.error('Could not connect to MongoDB Atlas', err));
+  .catch(err => {
+    console.error('MongoDB Atlas Connection Error:', err);
+    // You might want to implement a retry mechanism here
+  });
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -29,6 +32,22 @@ app.use('/api/orders', orderRoutes);
 // Define basic route
 app.get('/', (req, res) => {
   res.send('Hospital Food Ordering API is running');
+});
+
+// Add this route near your other routes
+app.get('/api/status', (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  const dbStatus = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting',
+  };
+  
+  res.json({
+    server: 'running',
+    database: dbStatus[dbState] || 'unknown'
+  });
 });
 
 // Protected route example
@@ -47,8 +66,16 @@ app.get('/api/profile', auth, async (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
+  console.error('Server error:', err);
   console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong on the server', error: err.message });
+  
+  // Send appropriate error response
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({ 
+    message: err.message || 'Something went wrong on the server', 
+    error: process.env.NODE_ENV === 'production' ? 'Server error' : err.message,
+    stack: process.env.NODE_ENV === 'production' ? '🥞' : err.stack
+  });
 });
 
 // Start server

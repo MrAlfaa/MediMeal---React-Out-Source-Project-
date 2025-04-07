@@ -49,15 +49,16 @@ const UserSchema = new mongoose.Schema({
 
 // Hash password before saving
 UserSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    return next();
-  }
-  
   try {
+    if (!this.isModified('password')) {
+      return next();
+    }
+    
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
+    console.error('Password hashing error:', error);
     next(error);
   }
 });
@@ -67,6 +68,7 @@ UserSchema.methods.comparePassword = async function(candidatePassword) {
   try {
     return await bcrypt.compare(candidatePassword, this.password);
   } catch (error) {
+    console.error('Password comparison error:', error);
     throw error;
   }
 };

@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   
   const navigate = useNavigate();
   
-  // Set up axios defaults
+  // Set up axios defaults - make sure this URL is correct
   axios.defaults.baseURL = 'http://localhost:5000/api';
   
   // Set token in axios headers
@@ -102,6 +102,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       navigate('/');
     } catch (err: any) {
+      console.error('Login error details:', err);
       setError(err.response?.data?.message || 'Login failed. Please try again.');
       throw err;
     }
@@ -111,10 +112,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (userData: any) => {
     try {
       setError(null);
+      // Full path is now correct: http://localhost:5000/api/auth/register
       const res = await axios.post('/auth/register', userData);
       return res.data;
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      console.error('Registration error details:', err);
+      // More specific error message based on error type
+      if (err.code === 'ERR_NETWORK') {
+        setError('Unable to connect to the server. Please check your internet connection.');
+      } else if (err.response?.status === 500) {
+        setError('Server error. The system might be experiencing database connectivity issues.');
+      } else {
+        setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      }
       throw err;
     }
   };

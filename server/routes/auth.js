@@ -11,6 +11,11 @@ router.post('/register', async (req, res) => {
   try {
     const { fullName, email, password, wardNumber, bedNumber, patientId, contactNumber, dietaryRestrictions } = req.body;
     
+    // Validate input
+    if (!fullName || !email || !password || !wardNumber || !bedNumber || !patientId) {
+      return res.status(400).json({ message: 'Please provide all required fields' });
+    }
+    
     // Check if user already exists
     const existingUser = await User.findOne({ $or: [{ email }, { patientId }] });
     if (existingUser) {
@@ -37,7 +42,11 @@ router.post('/register', async (req, res) => {
       success: true
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Registration error:', error);
+    res.status(500).json({ 
+      message: 'Server error during registration', 
+      error: error.message 
+    });
   }
 });
 
@@ -45,6 +54,11 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Please provide email and password' });
+    }
     
     // Find user by email
     const user = await User.findOne({ email });
@@ -75,10 +89,12 @@ router.post('/login', async (req, res) => {
         wardNumber: user.wardNumber,
         bedNumber: user.bedNumber,
         patientId: user.patientId,
-        contactNumber: user.contactNumber
+        contactNumber: user.contactNumber,
+        dietaryRestrictions: user.dietaryRestrictions
       }
     });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
