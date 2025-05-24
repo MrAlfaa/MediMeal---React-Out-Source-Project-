@@ -73,11 +73,11 @@ const Login: React.FC = () => {
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 flex items-center justify-center py-6 px-4 sm:py-12 sm:px-6 lg:px-8">
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="px-6 py-8 sm:px-10">
+        <div className="px-4 py-6 sm:px-8 lg:px-10 sm:py-8">
           <div className="text-center">
-            <h2 className="text-3xl font-extrabold text-gray-900">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
               MediMeal Connect
             </h2>
             <p className="mt-2 text-sm text-gray-600">
@@ -86,13 +86,13 @@ const Login: React.FC = () => {
           </div>
           
           {error && (
-            <div className="mt-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md" role="alert">
-              <p className="font-medium">Error</p>
-              <p>{error}</p>
+            <div className="mt-4 sm:mt-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-3 sm:p-4 rounded-md" role="alert">
+              <p className="font-medium text-sm">Error</p>
+              <p className="text-sm">{error}</p>
             </div>
           )}
           
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <form className="mt-6 sm:mt-8 space-y-4 sm:space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email address</label>
@@ -102,7 +102,7 @@ const Login: React.FC = () => {
                   type="email"
                   autoComplete="email"
                   required
-                  className={`appearance-none relative block w-full px-3 py-2 border ${formErrors.email ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
+                  className={`appearance-none relative block w-full px-3 py-2.5 sm:py-2 border ${formErrors.email ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 text-sm sm:text-base`}
                   placeholder="Email address"
                   value={formData.email}
                   onChange={handleChange}
@@ -118,7 +118,7 @@ const Login: React.FC = () => {
                   type="password"
                   autoComplete="current-password"
                   required
-                  className={`appearance-none relative block w-full px-3 py-2 border ${formErrors.password ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
+                  className={`appearance-none relative block w-full px-3 py-2.5 sm:py-2 border ${formErrors.password ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 text-sm sm:text-base`}
                   placeholder="Password"
                   value={formData.password}
                   onChange={handleChange}
@@ -156,8 +156,8 @@ const Login: React.FC = () => {
             </div>
           </form>
         </div>
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 sm:px-10">
-          <p className="text-xs text-gray-500">
+        <div className="px-4 py-3 sm:px-8 lg:px-10 sm:py-4 bg-gray-50 border-t border-gray-200">
+          <p className="text-xs text-gray-500 text-center">
             By signing in, you agree to our Terms of Service and Privacy Policy.
           </p>
         </div>

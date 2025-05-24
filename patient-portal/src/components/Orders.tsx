@@ -188,40 +188,42 @@ const Orders: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {orders.map((order) => (
-                <div key={order.id} className="bg-white shadow overflow-hidden sm:rounded-lg">
-                  <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
-                    <div>
-                      <h3 className="text-lg leading-6 font-medium text-gray-900">
+                <div key={order.id} className="bg-white shadow overflow-hidden rounded-lg">
+                  <div className="px-4 py-4 sm:px-6 sm:py-5 flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base sm:text-lg leading-6 font-medium text-gray-900">
                         Order #{order.id.substring(order.id.length - 6)}
                       </h3>
-                      <p className="mt-1 max-w-2xl text-sm text-gray-500">
+                      <p className="mt-1 text-sm text-gray-500">
                         Placed on {formatDate(order.createdAt)}
                       </p>
                     </div>
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(order.status)}`}>
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                    </span>
+                    <div className="mt-2 sm:mt-0 sm:ml-4">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(order.status)}`}>
+                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      </span>
+                    </div>
                   </div>
                   <div className="border-t border-gray-200">
                     <dl>
-                      <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                      <div className="bg-gray-50 px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                         <dt className="text-sm font-medium text-gray-500">Delivery Time</dt>
                         <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.deliveryTime}</dd>
                       </div>
-                      <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                      <div className="bg-white px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                         <dt className="text-sm font-medium text-gray-500">Items</dt>
                         <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                           <ul className="border border-gray-200 rounded-md divide-y divide-gray-200">
                             {order.items.map((item) => (
-                              <li key={item.id} className="pl-3 pr-4 py-3 flex items-center justify-between text-sm">
-                                <div className="w-0 flex-1 flex items-center">
-                                  <span className="ml-2 flex-1 w-0 truncate">
+                              <li key={item.id} className="px-3 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm">
+                                <div className="flex-1 min-w-0">
+                                  <span className="truncate">
                                     {item.quantity} x {item.name}
                                   </span>
                                 </div>
-                                <div className="ml-4 flex-shrink-0">
+                                <div className="mt-1 sm:mt-0 sm:ml-4 flex-shrink-0">
                                   ${item.price.toFixed(2)}
                                 </div>
                               </li>
@@ -230,22 +232,22 @@ const Orders: React.FC = () => {
                         </dd>
                       </div>
                       {order.specialInstructions && (
-                        <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                        <div className="bg-gray-50 px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                           <dt className="text-sm font-medium text-gray-500">Special Instructions</dt>
                           <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.specialInstructions}</dd>
                         </div>
                       )}
-                      <div className={`${order.specialInstructions ? 'bg-white' : 'bg-gray-50'} px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6`}>
+                      <div className={`${order.specialInstructions ? 'bg-white' : 'bg-gray-50'} px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6`}>
                         <dt className="text-sm font-medium text-gray-500">Total Amount</dt>
                         <dd className="mt-1 text-sm font-medium text-gray-900 sm:mt-0 sm:col-span-2">${order.totalAmount.toFixed(2)}</dd>
                       </div>
                     </dl>
                   </div>
-                  <div className="bg-gray-50 px-4 py-4 sm:px-6 flex justify-end space-x-3">
+                  <div className="bg-gray-50 px-4 py-4 sm:px-6 flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-3">
                     {order.status === 'pending' && (
                       <button
                         type="button"
-                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        className="inline-flex items-center justify-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                         onClick={() => alert('Cancel order functionality would be implemented here')}
                       >
                         Cancel Order
@@ -253,7 +255,7 @@ const Orders: React.FC = () => {
                     )}
                     <button
                       type="button"
-                      className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      className="inline-flex items-center justify-center px-3 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                       onClick={() => alert('Track order functionality would be implemented here')}
                     >
                       Track Order

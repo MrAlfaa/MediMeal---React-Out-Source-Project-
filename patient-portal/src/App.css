@@ -1,7 +1,7 @@
 #root {
-  max-width: 1280px;
+  max-width: 100%;
   margin: 0 auto;
-  text-align: center;
+  text-align: left; /* Changed from center for better mobile experience */
 }
 
 .logo {
@@ -33,14 +33,20 @@
 }
 
 .card {
-  padding: 2em;
+  padding: 1rem;
+}
+
+@media (min-width: 640px) {
+  .card {
+    padding: 2rem;
+  }
 }
 
 .read-the-docs {
   color: #888;
 }
 
-/* Custom styles for MediMeal Connect */
+/* Custom styles for MediMeal Connect - Enhanced Responsive */
 .medimeal-header {
   background-color: #4f46e5;
   color: white;
@@ -48,16 +54,30 @@
 
 .medimeal-logo {
   font-weight: bold;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .medimeal-logo {
+    font-size: 1.5rem;
+  }
 }
 
 .medimeal-button {
   background-color: #4f46e5;
   color: white;
-  padding: 0.5rem 1rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 0.375rem;
   font-weight: 500;
   transition: background-color 0.2s;
+  font-size: 0.875rem;
+}
+
+@media (min-width: 640px) {
+  .medimeal-button {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+  }
 }
 
 .medimeal-button:hover {
@@ -68,11 +88,17 @@
   border-radius: 0.5rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   background-color: white;
-  padding: 1.5rem;
+  padding: 1rem;
   margin-bottom: 1rem;
 }
 
-/* Form styles */
+@media (min-width: 640px) {
+  .medimeal-card {
+    padding: 1.5rem;
+  }
+}
+
+/* Form styles - Enhanced for mobile */
 .form-input-error {
   border-color: #ef4444;
 }
@@ -80,6 +106,19 @@
 .form-input-error:focus {
   border-color: #ef4444;
   box-shadow: 0 0 0 1px #ef4444;
+}
+
+/* Mobile-first responsive form inputs */
+.responsive-input {
+  font-size: 16px; /* Prevents zoom on iOS */
+  padding: 0.75rem 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-input {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+  }
 }
 
 /* Animation for page transitions */
@@ -105,10 +144,93 @@
   transition: opacity 300ms, transform 300ms;
 }
 
-/* Responsive adjustments */
-@media (max-width: 640px) {
+/* Enhanced responsive adjustments */
+.responsive-container {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
   .responsive-container {
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+/* Mobile navigation improvements */
+.mobile-nav-item {
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* Touch-friendly buttons */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Better mobile dropdown positioning */
+.mobile-dropdown {
+  position: fixed;
+  left: 1rem;
+  right: 1rem;
+  z-index: 50;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+@media (min-width: 640px) {
+  .mobile-dropdown {
+    position: absolute;
+    left: auto;
+    right: 0;
+    width: 20rem;
+    max-height: 24rem;
+  }
+}
+
+/* Responsive grid improvements */
+.responsive-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .responsive-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .responsive-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .responsive-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* Safe area handling for mobile devices */
+@supports (padding: max(0px)) {
+  .safe-area-inset {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
   }
 }

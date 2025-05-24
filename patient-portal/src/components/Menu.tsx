@@ -201,12 +201,12 @@ const Menu: React.FC = () => {
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
-            <div className="flex">
+            <div className="flex items-center">
               <Link to="/" className="flex-shrink-0 flex items-center">
-                <svg className="h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="h-6 w-6 sm:h-8 sm:w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
-                <span className="ml-2 text-xl font-bold text-gray-900">Menu</span>
+                <span className="ml-2 text-lg sm:text-xl font-bold text-gray-900">Menu</span>
               </Link>
             </div>
             <div className="flex items-center">
@@ -214,44 +214,44 @@ const Menu: React.FC = () => {
                 <button
                   type="button"
                   title="Shopping Cart"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="inline-flex items-center px-3 py-2 sm:px-4 border border-transparent text-xs sm:text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
-                  <svg className="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                   </svg>
-                  Cart ({cart.reduce((total, item) => total + item.quantity, 0)})
+                  <span className="hidden sm:inline">Cart</span> ({cart.reduce((total, item) => total + item.quantity, 0)})
                 </button>
                 {cart.length > 0 && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg z-10">
+                  <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-md shadow-lg z-50 max-h-96 overflow-hidden">
                     <div className="py-2 px-4 border-b border-gray-200">
                       <h3 className="text-sm font-medium text-gray-900">Your Cart</h3>
                     </div>
                     <div className="max-h-64 overflow-y-auto">
                       {cart.map(item => (
                         <div key={item.id} className="py-2 px-4 flex justify-between items-center hover:bg-gray-50">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{item.name}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
                             <p className="text-sm text-gray-500">${item.price.toFixed(2)} x {item.quantity}</p>
                           </div>
-                          <div className="flex items-center">
+                          <div className="flex items-center ml-2">
                             <button
                               type="button"
                               title="Remove item"
                               onClick={() => removeFromCart(item.id)}
-                              className="text-gray-400 hover:text-gray-500"
+                              className="text-gray-400 hover:text-gray-500 p-1"
                             >
-                              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
                             </button>
-                            <span className="mx-2 text-gray-700">{item.quantity}</span>
+                            <span className="mx-2 text-gray-700 min-w-0">{item.quantity}</span>
                             <button
                               type="button"
                               title="Add item"
                               onClick={() => addToCart(item)}
-                              className="text-gray-400 hover:text-gray-500"
+                              className="text-gray-400 hover:text-gray-500 p-1"
                             >
-                              <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
                             </button>
@@ -281,46 +281,44 @@ const Menu: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
+      <div className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
+        <div className="space-y-4 sm:space-y-6">
           {/* Search and filter */}
-          <div className="mb-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-              <div className="mb-4 md:mb-0 md:w-1/3">
-                <label htmlFor="search" className="sr-only">Search</label>
-                <div className="relative rounded-md shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </div>
-                  <input
-                    type="text"
-                    name="search"
-                    id="search"
-                    className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
-                    placeholder="Search menu"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
+          <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
+            <div className="flex-1 max-w-lg">
+              <label htmlFor="search" className="sr-only">Search</label>
+              <div className="relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                 </div>
+                <input
+                  type="text"
+                  name="search"
+                  id="search"
+                  className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 sm:text-sm border-gray-300 rounded-md"
+                  placeholder="Search menu"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
-              <div className="flex overflow-x-auto pb-2 md:pb-0">
-                {categories.map(category => (
-                  <button
-                    key={category}
-                    title={`Filter by ${category}`}
-                    className={`px-3 py-2 rounded-md text-sm font-medium mr-2 whitespace-nowrap ${
-                      activeCategory === category
-                        ? 'bg-indigo-100 text-indigo-700'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                    onClick={() => setActiveCategory(category)}
-                  >
-                    {category.charAt(0).toUpperCase() + category.slice(1)}
-                  </button>
-                ))}
-              </div>
+            </div>
+            <div className="flex overflow-x-auto pb-2 lg:pb-0 space-x-2">
+              {categories.map(category => (
+                <button
+                  key={category}
+                  title={`Filter by ${category}`}
+                  className={`px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap ${
+                    activeCategory === category
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                  onClick={() => setActiveCategory(category)}
+                >
+                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -352,55 +350,54 @@ const Menu: React.FC = () => {
               <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter to find what you're looking for.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-3">
               {filteredItems.map(item => (
                 <div key={item.id} className="bg-white overflow-hidden shadow rounded-lg">
-                  <div className="h-48 w-full bg-gray-200">
+                  <div className="h-40 sm:h-48 w-full bg-gray-200">
                     <img 
                       src={item.image} 
                       alt={item.name}
                       className="h-full w-full object-cover"
                       onError={(e) => {
-                        // Fallback image if the original fails to load
                         (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c';
                       }}
                     />
                   </div>
-                  <div className="px-4 py-5 sm:p-6">
+                  <div className="p-4 sm:p-6">
                     <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">{item.name}</h3>
-                        <p className="mt-1 text-sm text-gray-500">{item.description}</p>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base sm:text-lg font-medium text-gray-900 truncate">{item.name}</h3>
+                        <p className="mt-1 text-sm text-gray-500 line-clamp-2">{item.description}</p>
                       </div>
-                      <span className="text-lg font-medium text-gray-900">${item.price.toFixed(2)}</span>
+                      <span className="ml-2 text-lg font-medium text-gray-900 flex-shrink-0">${item.price.toFixed(2)}</span>
                     </div>
                     
-                    <div className="mt-4">
+                    <div className="mt-3 sm:mt-4">
                       <div className="flex flex-wrap gap-1">
                         {item.tags.map(tag => (
-                          <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                          <span key={tag} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
                             {tag}
                           </span>
                         ))}
                       </div>
                     </div>
                     
-                    <div className="mt-4">
+                    <div className="mt-3 sm:mt-4">
                       <h4 className="text-sm font-medium text-gray-900">Nutritional Info</h4>
-                      <div className="mt-2 grid grid-cols-4 gap-2 text-xs">
-                        <div className="bg-gray-50 p-2 rounded">
+                      <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <div className="bg-gray-50 p-2 rounded text-center">
                           <p className="font-medium">Calories</p>
                           <p>{item.nutritionalInfo.calories}</p>
                         </div>
-                        <div className="bg-gray-50 p-2 rounded">
+                        <div className="bg-gray-50 p-2 rounded text-center">
                           <p className="font-medium">Protein</p>
                           <p>{item.nutritionalInfo.protein}g</p>
                         </div>
-                        <div className="bg-gray-50 p-2 rounded">
+                        <div className="bg-gray-50 p-2 rounded text-center">
                           <p className="font-medium">Carbs</p>
                           <p>{item.nutritionalInfo.carbs}g</p>
                         </div>
-                        <div className="bg-gray-50 p-2 rounded">
+                        <div className="bg-gray-50 p-2 rounded text-center">
                           <p className="font-medium">Fat</p>
                           <p>{item.nutritionalInfo.fat}g</p>
                         </div>
@@ -408,13 +405,13 @@ const Menu: React.FC = () => {
                     </div>
                     
                     {item.allergens.length > 0 && (
-                      <div className="mt-4">
+                      <div className="mt-3 sm:mt-4">
                         <h4 className="text-sm font-medium text-gray-900">Allergens</h4>
                         <p className="mt-1 text-sm text-gray-500">{item.allergens.join(', ')}</p>
                       </div>
                     )}
                     
-                    <div className="mt-5">
+                    <div className="mt-4 sm:mt-5">
                       <button
                         type="button"
                         title={`Add ${item.name} to cart`}

@@ -147,14 +147,14 @@ const Register: React.FC = () => {
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="md:flex">
-          <div className="hidden md:block md:w-1/3 bg-indigo-600 p-10 text-white">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 py-6 px-4 sm:py-12 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="lg:flex">
+          <div className="hidden lg:block lg:w-1/3 bg-indigo-600 p-8 xl:p-10 text-white">
             <div className="h-full flex flex-col justify-between">
               <div>
-                <h2 className="text-2xl font-bold mb-6">MediMeal Connect</h2>
-                <p className="mb-8">Join our hospital food ordering system for a convenient and personalized meal experience during your stay.</p>
+                <h2 className="text-xl xl:text-2xl font-bold mb-4 xl:mb-6">MediMeal Connect</h2>
+                <p className="text-sm xl:text-base mb-6 xl:mb-8">Join our hospital food ordering system for a convenient and personalized meal experience during your stay.</p>
               </div>
               <div>
                 <p className="text-sm opacity-80">Already have an account?</p>
@@ -164,29 +164,29 @@ const Register: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="md:w-2/3 p-8">
-            <div className="md:hidden text-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">MediMeal Connect</h2>
+          <div className="lg:w-2/3 p-6 sm:p-8">
+            <div className="lg:hidden text-center mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">MediMeal Connect</h2>
               <p className="mt-2 text-sm text-gray-600">Create your patient account</p>
             </div>
             
             {successMessage && (
-              <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-md" role="alert">
-                <p className="font-medium">Success</p>
-                <p>{successMessage}</p>
+              <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-3 sm:p-4 mb-4 sm:mb-6 rounded-md" role="alert">
+                <p className="font-medium text-sm">Success</p>
+                <p className="text-sm">{successMessage}</p>
               </div>
             )}
             
             {error && !successMessage && (
-              <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md" role="alert">
-                <p className="font-medium">Error</p>
-                <p>{error}</p>
+              <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 sm:p-4 mb-4 sm:mb-6 rounded-md" role="alert">
+                <p className="font-medium text-sm">Error</p>
+                <p className="text-sm">{error}</p>
               </div>
             )}
             
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
+            <form className="space-y-4 sm:space-y-6" onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div className="sm:col-span-1">
                   <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
                   <input
                     id="fullName"
@@ -194,7 +194,7 @@ const Register: React.FC = () => {
                     type="text"
                     autoComplete="name"
                     required
-                    className={`appearance-none relative block w-full px-3 py-2 border ${formErrors.fullName ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
+                    className={`appearance-none relative block w-full px-3 py-2.5 sm:py-2 border ${formErrors.fullName ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 text-sm sm:text-base`}
                     placeholder="Full Name"
                     value={formData.fullName}
                     onChange={handleChange}
@@ -203,7 +203,7 @@ const Register: React.FC = () => {
                   {formErrors.fullName && <p className="text-red-500 text-xs mt-1">{formErrors.fullName}</p>}
                 </div>
                 
-                <div>
+                <div className="sm:col-span-1">
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
                   <input
                     id="email"
@@ -211,7 +211,7 @@ const Register: React.FC = () => {
                     type="email"
                     autoComplete="email"
                     required
-                    className={`appearance-none relative block w-full px-3 py-2 border ${formErrors.email ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
+                    className={`appearance-none relative block w-full px-3 py-2.5 sm:py-2 border ${formErrors.email ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 text-sm sm:text-base`}
                     placeholder="Email Address"
                     value={formData.email}
                     onChange={handleChange}
@@ -270,7 +270,7 @@ const Register: React.FC = () => {
                   {formErrors.patientId && <p className="text-red-500 text-xs mt-1">{formErrors.patientId}</p>}
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:col-span-2">
                   <div>
                     <label htmlFor="wardNumber" className="block text-sm font-medium text-gray-700 mb-1">Ward Number</label>
                     <input
@@ -278,7 +278,7 @@ const Register: React.FC = () => {
                       name="wardNumber"
                       type="text"
                       required
-                      className={`appearance-none relative block w-full px-3 py-2 border ${formErrors.wardNumber ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
+                      className={`appearance-none relative block w-full px-3 py-2.5 sm:py-2 border ${formErrors.wardNumber ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 text-sm sm:text-base`}
                       placeholder="Ward Number"
                       value={formData.wardNumber}
                       onChange={handleChange}
@@ -294,7 +294,7 @@ const Register: React.FC = () => {
                       name="bedNumber"
                       type="text"
                       required
-                      className={`appearance-none relative block w-full px-3 py-2 border ${formErrors.bedNumber ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
+                      className={`appearance-none relative block w-full px-3 py-2.5 sm:py-2 border ${formErrors.bedNumber ? 'border-red-300' : 'border-gray-300'} placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 text-sm sm:text-base`}
                       placeholder="Bed Number"
                       value={formData.bedNumber}
                       onChange={handleChange}
@@ -354,7 +354,7 @@ const Register: React.FC = () => {
                 </button>
               </div>
               
-              <div className="text-sm text-center md:hidden">
+              <div className="text-sm text-center lg:hidden">
                 <p>
                   Already have an account?{' '}
                   <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
@@ -367,7 +367,7 @@ const Register: React.FC = () => {
         </div>
       </div>
       
-      <div className="mt-8 text-center text-sm text-gray-600">
+      <div className="mt-6 text-center text-sm text-gray-600">
         <p>© 2023 MediMeal Connect. All rights reserved.</p>
       </div>
     </div>
