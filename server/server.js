@@ -11,7 +11,8 @@ app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:5174'], // Allow both portals
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Increase limit for image uploads
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // MongoDB Atlas Connection with improved error handling
 mongoose.connect(process.env.MONGODB_URI)
@@ -22,29 +23,8 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // Import routes
 const authRoutes = require('./routes/auth');
-
-// Create menu and orders routes if they don't exist
-let menuRoutes, orderRoutes;
-try {
-  menuRoutes = require('./routes/menu');
-} catch (err) {
-  // Create a simple router if menu routes don't exist
-  menuRoutes = express.Router();
-  menuRoutes.get('/', (req, res) => {
-    res.json({ message: 'Menu routes working', items: [] });
-  });
-}
-
-try {
-  orderRoutes = require('./routes/orders');
-} catch (err) {
-  // Create a simple router if order routes don't exist
-  orderRoutes = express.Router();
-  orderRoutes.get('/', (req, res) => {
-    res.json({ message: 'Order routes working', orders: [] });
-  });
-}
-
+const menuRoutes = require('./routes/menu');
+const orderRoutes = require('./routes/orders');
 const auth = require('./middleware/auth');
 
 // Use routes
@@ -57,7 +37,7 @@ app.get('/', (req, res) => {
   res.send('Hospital Food Ordering API is running');
 });
 
-// Add this route near your other routes
+// Health check route
 app.get('/api/status', (req, res) => {
   const dbState = mongoose.connection.readyState;
   const dbStatus = {
@@ -69,7 +49,8 @@ app.get('/api/status', (req, res) => {
   
   res.json({
     server: 'running',
-    database: dbStatus[dbState] || 'unknown'
+    database: dbStatus[dbState] || 'unknown',
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -101,7 +82,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler for unmatched routes - FIXED: Use proper route pattern
+// 404 handler for unmatched routes
 app.use((req, res) => {
   console.log(`Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({ 
