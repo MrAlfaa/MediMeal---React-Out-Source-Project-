@@ -4,7 +4,7 @@ import axios from 'axios';
 import Navigation from './Navigation';
 
 interface MenuItem {
-  id: string;
+  _id: string;
   name: string;
   description: string;
   price: number;
@@ -18,6 +18,7 @@ interface MenuItem {
     fat: number;
   };
   allergens: string[];
+  isAvailable: boolean;
 }
 
 interface CartItem extends MenuItem {
@@ -33,109 +34,67 @@ const Menu: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    // Mock data for demonstration
-    setTimeout(() => {
-      setMenuItems([
-        {
-          id: '1',
-          name: 'Vegetable Soup',
-          description: 'A hearty soup with seasonal vegetables and herbs.',
-          price: 5.99,
-          category: 'Soups',
-          image: 'https://images.unsplash.com/photo-1547592180-85f173990554',
-          tags: ['vegetarian', 'healthy', 'low-sodium'],
-          nutritionalInfo: {
-            calories: 120,
-            protein: 4,
-            carbs: 20,
-            fat: 2
-          },
-          allergens: []
-        },
-        {
-          id: '2',
-          name: 'Grilled Chicken Salad',
-          description: 'Fresh mixed greens with grilled chicken breast, cherry tomatoes, and balsamic vinaigrette.',
-          price: 8.99,
-          category: 'Salads',
-          image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
-          tags: ['high-protein', 'low-carb'],
-          nutritionalInfo: {
-            calories: 320,
-            protein: 28,
-            carbs: 12,
-            fat: 18
-          },
-          allergens: []
-        },
-        {
-          id: '3',
-          name: 'Whole Grain Pasta',
-          description: 'Whole grain pasta with marinara sauce and seasonal vegetables.',
-          price: 7.99,
-          category: 'Main Courses',
-          image: 'https://images.unsplash.com/photo-1563379926898-05f4575a45d8',
-          tags: ['vegetarian', 'high-fiber'],
-          nutritionalInfo: {
-            calories: 380,
-            protein: 12,
-            carbs: 68,
-            fat: 6
-          },
-          allergens: ['gluten', 'wheat']
-        },
-        {
-          id: '4',
-          name: 'Baked Salmon',
-          description: 'Oven-baked salmon fillet with lemon and herbs, served with steamed vegetables.',
-          price: 12.99,
-          category: 'Main Courses',
-          image: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2',
-          tags: ['high-protein', 'omega-3'],
-          nutritionalInfo: {
-            calories: 420,
-            protein: 32,
-            carbs: 8,
-            fat: 28
-          },
-          allergens: ['fish']
-        },
-        {
-          id: '5',
-          name: 'Fresh Fruit Platter',
-          description: 'Assortment of seasonal fresh fruits.',
-          price: 6.99,
-          category: 'Desserts',
-          image: 'https://images.unsplash.com/photo-1490474418585-ba9bad8fd0ea',
-          tags: ['vegetarian', 'vegan', 'low-calorie'],
-          nutritionalInfo: {
-            calories: 120,
-            protein: 1,
-            carbs: 30,
-            fat: 0
-          },
-          allergens: []
-        },
-        {
-          id: '6',
-          name: 'Chicken Noodle Soup',
-          description: 'Classic chicken soup with vegetables and noodles.',
-          price: 5.99,
-          category: 'Soups',
-          image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd',
-          tags: ['comfort-food'],
-          nutritionalInfo: {
-            calories: 220,
-            protein: 18,
-            carbs: 24,
-            fat: 6
-          },
-          allergens: ['gluten']
-        }
-      ]);
-      setLoading(false);
-    }, 1000);
+    fetchMenuItems();
   }, []);
+
+  const fetchMenuItems = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('/menu', {
+        params: {
+          available: true // Only fetch available items
+        }
+      });
+      setMenuItems(response.data);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching menu items:', err);
+      setError('Failed to load menu items. Please try again later.');
+      // Fallback to mock data if API fails
+      setTimeout(() => {
+        setMenuItems([
+          {
+            _id: '1',
+            name: 'Vegetable Soup',
+            description: 'A hearty soup with seasonal vegetables and herbs.',
+            price: 5.99,
+            category: 'Soups',
+            image: 'https://images.unsplash.com/photo-1547592180-85f173990554',
+            tags: ['vegetarian', 'healthy', 'low-sodium'],
+            nutritionalInfo: {
+              calories: 120,
+              protein: 4,
+              carbs: 20,
+              fat: 2
+            },
+            allergens: [],
+            isAvailable: true
+          },
+          {
+            _id: '2',
+            name: 'Grilled Chicken Salad',
+            description: 'Fresh mixed greens with grilled chicken breast, cherry tomatoes, and balsamic vinaigrette.',
+            price: 8.99,
+            category: 'Salads',
+            image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
+            tags: ['high-protein', 'low-carb'],
+            nutritionalInfo: {
+              calories: 320,
+              protein: 28,
+              carbs: 12,
+              fat: 18
+            },
+            allergens: [],
+            isAvailable: true
+          }
+        ]);
+        setLoading(false);
+        setError(null);
+      }, 1000);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const categories = ['all', ...Array.from(new Set(menuItems.map(item => item.category)))];
 
@@ -144,15 +103,15 @@ const Menu: React.FC = () => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           item.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesCategory && matchesSearch;
+    return matchesCategory && matchesSearch && item.isAvailable;
   });
 
   const addToCart = (item: MenuItem) => {
     setCart(prevCart => {
-      const existingItem = prevCart.find(cartItem => cartItem.id === item.id);
+      const existingItem = prevCart.find(cartItem => cartItem._id === item._id);
       if (existingItem) {
         return prevCart.map(cartItem => 
-          cartItem.id === item.id 
+          cartItem._id === item._id 
             ? { ...cartItem, quantity: cartItem.quantity + 1 } 
             : cartItem
         );
@@ -164,15 +123,15 @@ const Menu: React.FC = () => {
 
   const removeFromCart = (itemId: string) => {
     setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.id === itemId);
+      const existingItem = prevCart.find(item => item._id === itemId);
       if (existingItem && existingItem.quantity > 1) {
         return prevCart.map(item => 
-          item.id === itemId 
+          item._id === itemId 
             ? { ...item, quantity: item.quantity - 1 } 
             : item
         );
       } else {
-        return prevCart.filter(item => item.id !== itemId);
+        return prevCart.filter(item => item._id !== itemId);
       }
     });
   };
@@ -207,7 +166,7 @@ const Menu: React.FC = () => {
               </div>
               <div className="max-h-64 overflow-y-auto">
                 {cart.map(item => (
-                  <div key={item.id} className="py-3 px-4 flex justify-between items-center hover:bg-gray-50 transition-colors duration-150">
+                  <div key={item._id} className="py-3 px-4 flex justify-between items-center hover:bg-gray-50 transition-colors duration-150">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
                       <p className="text-sm text-gray-500">${item.price.toFixed(2)} x {item.quantity}</p>
@@ -216,7 +175,7 @@ const Menu: React.FC = () => {
                       <button
                         type="button"
                         title="Remove item"
-                        onClick={() => removeFromCart(item.id)}
+                        onClick={() => removeFromCart(item._id)}
                         className="text-gray-400 hover:text-red-500 p-1 transition-colors duration-150"
                       >
                         <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -259,6 +218,24 @@ const Menu: React.FC = () => {
 
       <div className="max-w-7xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8">
         <div className="space-y-4 sm:space-y-6">
+          {/* Header with Refresh Button */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Our Menu</h1>
+              <p className="mt-1 text-sm text-gray-500">Fresh meals prepared daily</p>
+            </div>
+            <button
+              onClick={fetchMenuItems}
+              disabled={loading}
+              className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 disabled:opacity-50"
+            >
+              <svg className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh Menu
+            </button>
+          </div>
+
           {/* Search and filter */}
           <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0">
             <div className="flex-1 max-w-lg">
@@ -321,14 +298,13 @@ const Menu: React.FC = () => {
               <svg className="mx-auto h-12 w-12 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-
               <h3 className="mt-2 text-sm font-medium text-gray-900">No items found</h3>
               <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter to find what you're looking for.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
               {filteredItems.map(item => (
-                <div key={item.id} className="bg-white overflow-hidden shadow-lg rounded-xl transition-all duration-300 hover:shadow-xl transform hover:-translate-y-2">
+                <div key={item._id} className="bg-white overflow-hidden shadow-lg rounded-xl transition-all duration-300 hover:shadow-xl transform hover:-translate-y-2">
                   <div className="h-48 w-full bg-gray-200 relative overflow-hidden">
                     <img 
                       src={item.image} 
@@ -460,4 +436,3 @@ const Menu: React.FC = () => {
 };
 
 export default Menu;
-
