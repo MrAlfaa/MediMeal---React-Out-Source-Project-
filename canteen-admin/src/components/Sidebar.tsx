@@ -16,7 +16,14 @@ interface SidebarProps {
   user: any;
   logout: () => void;
 }
-
+const navigation = [
+  { name: 'Dashboard', id: 'dashboard', icon: '📊', color: 'blue' },
+  { name: 'Menu Management', id: 'menu', icon: '🍽️', color: 'green' },
+  { name: 'Orders', id: 'orders', icon: '📋', color: 'yellow' },
+  { name: 'Users', id: 'users', icon: '👥', color: 'purple' },
+  { name: 'Analytics', id: 'analytics', icon: '📈', color: 'indigo' },
+  { name: 'Settings', id: 'settings', icon: '⚙️', color: 'gray' }
+];
 const Sidebar: React.FC<SidebarProps> = ({
   sidebarCollapsed,
   setSidebarCollapsed,

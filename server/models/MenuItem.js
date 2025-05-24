@@ -18,12 +18,38 @@ const menuItemSchema = new mongoose.Schema({
   category: {
     type: String,
     required: true,
-    enum: ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Beverages']
+    enum: ['Soups', 'Salads', 'Main Courses', 'Desserts', 'Beverages', 'Breakfast', 'Lunch', 'Dinner', 'Snacks']
   },
   image: {
     type: String,
-    default: 'default-food.jpg'
+    default: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c'
   },
+  tags: [{
+    type: String,
+    trim: true
+  }],
+  nutritionalInfo: {
+    calories: {
+      type: Number,
+      required: true
+    },
+    protein: {
+      type: Number,
+      required: true
+    },
+    carbs: {
+      type: Number,
+      required: true
+    },
+    fat: {
+      type: Number,
+      required: true
+    }
+  },
+  allergens: [{
+    type: String,
+    trim: true
+  }],
   dietaryInfo: {
     isVegetarian: {
       type: Boolean,
@@ -46,21 +72,17 @@ const menuItemSchema = new mongoose.Schema({
       default: false
     }
   },
-  nutritionalInfo: {
-    calories: Number,
-    protein: Number,
-    carbs: Number,
-    fat: Number,
-    sodium: Number
-  },
   isAvailable: {
     type: Boolean,
     default: true
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   }
+}, {
+  timestamps: true
 });
 
 const MenuItem = mongoose.model('MenuItem', menuItemSchema);
