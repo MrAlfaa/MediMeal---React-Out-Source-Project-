@@ -14,14 +14,20 @@ const Login: React.FC = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { login, error, isAuthenticated } = useContext(AuthContext);
+  const { login, error, isAuthenticated, user } = useContext(AuthContext);
   
-  // Redirect if already authenticated
+  // Redirect if already authenticated based on role
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/');
+    if (isAuthenticated && user) {
+      if (user.role === 'admin' || user.role === 'superadmin') {
+        // Redirect to admin portal
+        window.location.href = 'http://localhost:5174/dashboard';
+      } else {
+        // Regular user, go to patient portal home
+        navigate('/');
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -81,7 +87,7 @@ const Login: React.FC = () => {
               MediMeal Connect
             </h2>
             <p className="mt-2 text-sm text-gray-600">
-              Sign in to your patient account
+              Sign in to your account
             </p>
           </div>
           
