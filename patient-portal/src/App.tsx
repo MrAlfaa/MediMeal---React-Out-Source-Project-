@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { CartProvider } from './context/CartContext'
+import { WaterTrackingProvider } from './context/WaterTrackingContext'
 import Login from './components/Login'
 import Register from './components/Register'
 import Home from './components/Home'
@@ -66,26 +67,28 @@ function App() {
     <Router>
       <AuthProvider>
         <CartProvider>
-          <ErrorBoundary>
-            <div className="min-h-screen bg-gray-50">
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route element={<PrivateRoute />}>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/menu" element={<Menu />} />
-                  <Route path="/cart" element={<Cart />} />
-                  <Route path="/checkout" element={<Checkout />} />
-                  <Route path="/order-confirmation" element={<OrderConfirmation />} />
-                  <Route path="/order-history" element={<OrderHistory />} />
-                  <Route path="/orders" element={<Orders />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/dietary" element={<DietaryInfo />} />
-                </Route>
-                <Route path="*" element={<Navigate to="/" />} />
-              </Routes>
-            </div>
-          </ErrorBoundary>
+          <WaterTrackingProvider>
+            <ErrorBoundary>
+              <div className="min-h-screen bg-gray-50">
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route element={<PrivateRoute />}>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/menu" element={<Menu />} />
+                    <Route path="/cart" element={<Cart />} />
+                    <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/order-confirmation" element={<OrderConfirmation />} />
+                    <Route path="/order-history" element={<OrderHistory />} />
+                    <Route path="/orders" element={<Orders />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/dietary" element={<DietaryInfo />} />
+                  </Route>
+                  <Route path="*" element={<Navigate to="/" />} />
+                </Routes>
+              </div>
+            </ErrorBoundary>
+          </WaterTrackingProvider>
         </CartProvider>
       </AuthProvider>
     </Router>
