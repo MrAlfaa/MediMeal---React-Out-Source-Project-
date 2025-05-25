@@ -10,10 +10,58 @@ export interface OrderStats {
   statusCounts: Array<{ _id: string; count: number }>;
 }
 
-class OrderService {
-  private baseURL = '/api/orders';
+export interface Order {
+  _id: string;
+  orderNumber: string;
+  user: {
+    _id: string;
+    fullName: string;
+    email: string;
+    wardNumber: string;
+    bedNumber: string;
+    patientId: string;
+  };
+  items: Array<{
+    menuItem: string;
+    name: string;
+    description: string;
+    image: string;
+    quantity: number;
+    price: number;
+    category: string;
+    nutritionalInfo?: {
+      calories: number;
+      protein: number;
+      carbs: number;
+      fat: number;
+    };
+    allergens: string[];
+  }>;
+  totalAmount: number;
+  status: 'pending' | 'accepted' | 'processing' | 'ready' | 'delivered' | 'cancelled';
+  deliveryDetails: {
+    wardNumber: string;
+    bedNumber: string;
+    deliveryTime: string;
+    specialInstructions: string;
+  };
+  paymentDetails: {
+    method: string;
+    status: string;
+    transactionId?: string;
+    subtotal: number;
+    deliveryFee: number;
+    tax: number;
+    totalPaid: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
 
-  async getAllOrders(filters?: { status?: string; limit?: number; page?: number }) {
+class OrderService {
+  private baseURL = '/orders'; // Fixed: removed /api prefix since axios baseURL already includes it
+
+  async getAllOrders(filters?: { status?: string; limit?: number; page?: number }): Promise<Order[]> {
     try {
       const params = new URLSearchParams();
       if (filters?.status) params.append('status', filters.status);
@@ -44,17 +92,46 @@ class OrderService {
       return response.data;
     } catch (error) {
       console.error('Error fetching order stats:', error);
-      throw error;
+      // Return default stats if API fails
+      return {
+        totalOrders: 0,
+        todayOrders: 0,
+        pendingOrders: 0,
+        processingOrders: 0,
+        todayRevenue: 0,
+        totalRevenue: 0,
+        statusCounts: []
+      };
     }
   }
 
-  async getOrderById(orderId: string) {
+  async getOrderById(orderId: string): Promise<Order> {
     try {
       const response = await axios.get(`${this.baseURL}/${orderId}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching order:', error);
       throw error;
+    }
+  }
+
+  async getRecentOrders(limit: number = 5): Promise<Order[]> {
+    try {
+      const response = await axios.get(`${this.baseURL}/admin/all?limit=${limit}&page=1`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching recent orders:', error);
+      return [];
+    }
+  }
+
+  async getOrdersByStatus(status: string, limit: number = 10): Promise<Order[]> {
+    try {
+      const response = await axios.get(`${this.baseURL}/admin/all?status=${status}&limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching orders by status:', error);
+      return [];
     }
   }
 }
