@@ -145,8 +145,10 @@ const AdminDashboard: React.FC = () => {
         </div>
         
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50">
-          {renderPageContent()}
+        <main className="flex-1 overflow-hidden bg-gray-50 h-screen">
+          <div className="h-full">
+            {renderPageContent()}
+          </div>
         </main>
       </div>
     </div>
