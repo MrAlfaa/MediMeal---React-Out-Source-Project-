@@ -6,10 +6,12 @@ const router = express.Router();
 // Get user's orders
 router.get('/', auth, async (req, res) => {
   try {
+    console.log('Fetching orders for user:', req.user.userId);
     const orders = await Order.find({ user: req.user.userId })
       .populate('items.menuItem')
       .sort({ createdAt: -1 });
     
+    console.log('Found orders:', orders.length);
     res.json(orders);
   } catch (error) {
     console.error('Error fetching orders:', error);
@@ -158,7 +160,7 @@ router.patch('/:id/status', auth, async (req, res) => {
   }
 });
 
-// Cancel order (user can cancel if status is pending)
+// Enhanced cancel order route
 router.patch('/:id/cancel', auth, async (req, res) => {
   try {
     const order = await Order.findOne({ 
@@ -170,13 +172,17 @@ router.patch('/:id/cancel', auth, async (req, res) => {
       return res.status(404).json({ message: 'Order not found' });
     }
     
-    if (order.status !== 'pending') {
-      return res.status(400).json({ message: 'Order cannot be cancelled at this stage' });
+    // Check if order can be cancelled
+    if (!['pending', 'accepted'].includes(order.status)) {
+      return res.status(400).json({ 
+        message: `Order cannot be cancelled. Current status: ${order.status}` 
+      });
     }
     
     order.status = 'cancelled';
+    order.updatedAt = new Date();
     
-    // If payment was completed, handle refund
+    // Update payment status for refund processing
     if (order.paymentDetails.status === 'completed') {
       if (order.paymentDetails.method === 'card') {
         // In a real app, you would process refund here
