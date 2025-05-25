@@ -89,19 +89,16 @@ const orderSchema = new mongoose.Schema({
       type: String,
       default: null
     },
-    // For card payments
     cardDetails: {
       last4: String,
       brand: String,
       expiryMonth: Number,
       expiryYear: Number
     },
-    // For hospital account
     hospitalAccountId: {
       type: String,
       default: null
     },
-    // Payment amount and fees
     subtotal: {
       type: Number,
       required: true
@@ -122,7 +119,12 @@ const orderSchema = new mongoose.Schema({
   orderNumber: {
     type: String,
     unique: true,
-    required: true
+    required: true,
+    default: function() {
+      const timestamp = Date.now().toString();
+      const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      return `ORD-${timestamp.slice(-6)}-${random}`;
+    }
   },
   createdAt: {
     type: Date,
@@ -133,10 +135,9 @@ const orderSchema = new mongoose.Schema({
     default: Date.now
   }
 });
-
 // Generate order number before saving
 orderSchema.pre('save', function(next) {
-  if (this.isNew) {
+  if (this.isNew && !this.orderNumber) {
     const timestamp = Date.now().toString();
     const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
     this.orderNumber = `ORD-${timestamp.slice(-6)}-${random}`;
@@ -144,7 +145,6 @@ orderSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
-
 const Order = mongoose.model('Order', orderSchema);
 
 module.exports = Order;

@@ -50,11 +50,25 @@ const OrderConfirmation: React.FC = () => {
       month: 'long', 
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'local' // Use local timezone
     };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
   
+  const formatDeliveryTime = (dateString: string) => {
+    const deliveryDate = new Date(dateString);
+    const options: Intl.DateTimeFormatOptions = { 
+      weekday: 'long',
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    };
+    return deliveryDate.toLocaleDateString(undefined, options);
+  };  
   const getPaymentMethodDisplay = (method: string) => {
     switch (method) {
       case 'hospital-account':
@@ -118,9 +132,8 @@ const OrderConfirmation: React.FC = () => {
                 </div>
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Delivery Time</dt>
-                  <dd className="text-sm font-medium text-gray-900">{formatDate(order.deliveryDetails.deliveryTime)}</dd>
-                </div>
-                <div>
+                  <dd className="text-sm font-medium text-gray-900">{formatDeliveryTime(order.deliveryDetails.deliveryTime)}</dd>
+                </div>                <div>
                   <dt className="text-sm font-medium text-gray-500">Delivery Location</dt>
                   <dd className="text-sm font-medium text-gray-900">
                     Ward {order.deliveryDetails.wardNumber}, Bed {order.deliveryDetails.bedNumber}

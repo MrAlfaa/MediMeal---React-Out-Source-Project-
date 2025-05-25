@@ -71,17 +71,21 @@ app.get('/api/profile', auth, async (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  console.error(err.stack);
+  console.error('=== Server Error ===');
+  console.error('Timestamp:', new Date().toISOString());
+  console.error('Request URL:', req.originalUrl);
+  console.error('Request Method:', req.method);
+  console.error('Request Body:', req.body);
+  console.error('Error:', err);
+  console.error('Error Stack:', err.stack);
+  console.error('==================');
   
-  // Send appropriate error response
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({ 
     message: err.message || 'Something went wrong on the server', 
     error: process.env.NODE_ENV === 'production' ? 'Server error' : err.message
   });
 });
-
 // 404 handler for unmatched routes
 app.use((req, res) => {
   console.log(`Route not found: ${req.method} ${req.originalUrl}`);

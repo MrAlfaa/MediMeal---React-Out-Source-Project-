@@ -39,71 +39,111 @@ router.get('/:id', auth, async (req, res) => {
 // Create new order
 router.post('/', auth, async (req, res) => {
   try {
-    const { items, totalAmount, deliveryDetails, paymentDetails } = req.body;
+    console.log('Creating order with data:', req.body);
+    console.log('User from auth:', req.user);
     
+    const { 
+      items, 
+      totalAmount, 
+      deliveryDetails, 
+      paymentDetails 
+    } = req.body;
+
     // Validate required fields
-    if (!items || !items.length) {
+    if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: 'Order must contain at least one item' });
     }
-    
+
+    if (!totalAmount || totalAmount <= 0) {
+      return res.status(400).json({ message: 'Invalid total amount' });
+    }
+
     if (!deliveryDetails || !deliveryDetails.deliveryTime) {
-      return res.status(400).json({ message: 'Delivery time is required' });
+      return res.status(400).json({ message: 'Delivery details are required' });
     }
-    
+
     if (!paymentDetails || !paymentDetails.method) {
-      return res.status(400).json({ message: 'Payment method is required' });
+      return res.status(400).json({ message: 'Payment details are required' });
     }
-    
-    // Process payment based on method
-    let paymentStatus = 'pending';
-    let transactionId = null;
-    
-    if (paymentDetails.method === 'hospital-account') {
-      // Validate hospital account
-      if (!paymentDetails.hospitalAccountId) {
-        return res.status(400).json({ message: 'Hospital account ID is required' });
-      }
-      // In a real app, you would validate the hospital account here
-      paymentStatus = 'completed';
-      transactionId = `HSP-${Date.now()}`;
-    } else if (paymentDetails.method === 'cash') {
-      // Cash on delivery - payment pending until delivery
-      paymentStatus = 'pending';
-    } else if (paymentDetails.method === 'card') {
-      // In a real app, you would process the card payment here
-      // For now, we'll simulate successful payment
-      paymentStatus = 'completed';
-      transactionId = `CARD-${Date.now()}`;
-    }
-    
-    // Create order
-    const order = new Order({
+
+    // Generate order number
+    const timestamp = Date.now().toString();
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const orderNumber = `ORD-${timestamp.slice(-6)}-${random}`;
+
+    // Create the order object
+    const orderData = {
       user: req.user.userId,
-      items,
+      items: items.map(item => ({
+        menuItem: item.menuItem || item._id,
+        name: item.name,
+        description: item.description,
+        image: item.image,
+        quantity: item.quantity,
+        price: item.price,
+        category: item.category,
+        nutritionalInfo: item.nutritionalInfo || {},
+        allergens: item.allergens || []
+      })),
       totalAmount,
-      deliveryDetails,
+      deliveryDetails: {
+        wardNumber: deliveryDetails.wardNumber,
+        bedNumber: deliveryDetails.bedNumber,
+        deliveryTime: new Date(deliveryDetails.deliveryTime),
+        specialInstructions: deliveryDetails.specialInstructions || ''
+      },
       paymentDetails: {
-        ...paymentDetails,
-        status: paymentStatus,
-        transactionId
-      }
-    });
-    
-    await order.save();
-    
-    // Populate the order with menu item details
-    await order.populate('items.menuItem');
-    
+        method: paymentDetails.method,
+        status: paymentDetails.method === 'cash' ? 'pending' : 'processing',
+        subtotal: paymentDetails.subtotal || totalAmount,
+        deliveryFee: paymentDetails.deliveryFee || 0,
+        tax: paymentDetails.tax || 0,
+        totalPaid: paymentDetails.totalPaid || totalAmount,
+        ...(paymentDetails.cardDetails && { cardDetails: paymentDetails.cardDetails }),
+        ...(paymentDetails.hospitalAccountId && { hospitalAccountId: paymentDetails.hospitalAccountId })
+      },
+      orderNumber, // Explicitly set the order number
+      status: 'pending'
+    };
+
+    console.log('Final order data:', orderData);
+
+    // Create and save the order
+    const order = new Order(orderData);
+    const savedOrder = await order.save();
+
+    console.log('Order saved successfully:', savedOrder._id);
+
+    // Populate the order with user details for response
+    const populatedOrder = await Order.findById(savedOrder._id)
+      .populate('user', 'fullName email wardNumber bedNumber')
+      .populate('items.menuItem', 'name price category');
+
     res.status(201).json({
-      message: 'Order placed successfully',
-      order
+      message: 'Order created successfully',
+      order: populatedOrder
     });
+
   } catch (error) {
     console.error('Error creating order:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ 
+        message: 'Validation failed', 
+        errors: validationErrors,
+        details: error.errors
+      });
+    }
+    
+    res.status(500).json({ 
+      message: 'Server error while creating order', 
+      error: error.message 
+    });
   }
 });
-
 // Update order status (admin only)
 router.patch('/:id/status', auth, async (req, res) => {
   try {

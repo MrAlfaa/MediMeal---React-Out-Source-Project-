@@ -78,15 +78,15 @@ const Checkout: React.FC = () => {
           quantity: item.quantity,
           price: item.price,
           category: item.category,
-          nutritionalInfo: item.nutritionalInfo,
-          allergens: item.allergens
+          nutritionalInfo: item.nutritionalInfo || {},
+          allergens: item.allergens || []
         })),
         totalAmount: total,
         deliveryDetails: {
-          wardNumber: user?.wardNumber,
-          bedNumber: user?.bedNumber,
-          deliveryTime: new Date(deliveryTime),
-          specialInstructions
+          wardNumber: user?.wardNumber || '',
+          bedNumber: user?.bedNumber || '',
+          deliveryTime: deliveryTime,
+          specialInstructions: specialInstructions
         },
         paymentDetails: {
           method: paymentMethod,
@@ -94,6 +94,7 @@ const Checkout: React.FC = () => {
           deliveryFee,
           tax,
           totalPaid: total,
+          status: paymentMethod === 'cash' ? 'pending' : 'processing',
           ...(paymentMethod === 'card' && {
             cardDetails: {
               last4: cardDetails.cardNumber.slice(-4),
@@ -108,7 +109,11 @@ const Checkout: React.FC = () => {
         }
       };
       
+      console.log('Sending order data:', orderData);
+      
       const response = await axios.post('/orders', orderData);
+      
+      console.log('Order response:', response.data);
       
       // Clear cart and navigate to confirmation
       clearCart();
@@ -119,18 +124,18 @@ const Checkout: React.FC = () => {
       });
     } catch (err: any) {
       console.error('Error placing order:', err);
+      console.error('Error response:', err.response?.data);
       setError(err.response?.data?.message || 'Failed to place order. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
-  };
-  
+  };  
   // Generate delivery time options (every 30 minutes for the next 8 hours)
   const getDeliveryTimeOptions = () => {
     const options = [];
     const now = new Date();
     const startTime = new Date(now);
-    startTime.setMinutes(Math.ceil(now.getMinutes() / 30) * 30); // Round up to next 30 min
+    startTime.setMinutes(Math.ceil(now.getMinutes() / 30) * 30, 0, 0); // Round up to next 30 min
     
     for (let i = 1; i <= 16; i++) { // Start from 1 to give at least 30 min prep time
       const time = new Date(startTime);
@@ -142,17 +147,29 @@ const Checkout: React.FC = () => {
         hour12: true
       });
       
-      const formattedDate = time.toLocaleDateString();
+      const formattedDate = time.toLocaleDateString([], {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric'
+      });
       
       options.push({
         value: time.toISOString(),
-        label: `${formattedDate} at ${formattedTime}`
+        label: `${formattedDate} at ${formattedTime}`,
+        displayTime: time.toLocaleString([], {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
       });
     }
     
     return options;
-  };
-  
+  };  
   const deliveryTimeOptions = getDeliveryTimeOptions();
   
   return (
@@ -491,14 +508,20 @@ const Checkout: React.FC = () => {
                           </svg>
                         </div>
                         <div className="ml-3 flex-1 md:flex md:justify-between">
-                          <p className="text-sm text-gray-500">
-                            Your meal will be delivered to Ward {user?.wardNumber}, Bed {user?.bedNumber}
-                          </p>
+                          <div>
+                            <p className="text-sm text-gray-500">
+                              Delivery to Ward {user?.wardNumber}, Bed {user?.bedNumber}
+                            </p>
+                            {deliveryTime && (
+                              <p className="text-sm font-medium text-gray-700 mt-1">
+                                Scheduled for: {deliveryTimeOptions.find(option => option.value === deliveryTime)?.displayTime || 'Invalid time'}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  
+                  </div>                  
                   <div className="mt-6">
                     <button
                       type="submit"

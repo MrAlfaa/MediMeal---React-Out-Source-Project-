@@ -82,11 +82,35 @@ const Orders: React.FC = () => {
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      hour12: true
     };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
 
+  const formatDeliveryTime = (dateString: string) => {
+    const deliveryDate = new Date(dateString);
+    const now = new Date();
+    const isToday = deliveryDate.toDateString() === now.toDateString();
+    const isTomorrow = deliveryDate.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString();
+    
+    let dayText = '';
+    if (isToday) {
+      dayText = 'Today';
+    } else if (isTomorrow) {
+      dayText = 'Tomorrow';
+    } else {
+      dayText = deliveryDate.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+    }
+    
+    const timeText = deliveryDate.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
+    
+    return `${dayText} at ${timeText}`;
+  };
   const getStatusBadgeClass = (status: Order['status']) => {
     switch (status) {
       case 'pending':
@@ -241,9 +265,8 @@ const Orders: React.FC = () => {
                         <dl className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <dt className="text-gray-500">Delivery Time:</dt>
-                            <dd className="text-gray-900 font-medium">{order.deliveryTime}</dd>
-                          </div>
-                          <div className="flex justify-between text-sm">
+                            <dd className="text-gray-900 font-medium">{formatDeliveryTime(order.deliveryTime)}</dd>
+                          </div>                          <div className="flex justify-between text-sm">
                             <dt className="text-gray-500">Total Amount:</dt>
                             <dd className="text-gray-900 font-medium">${order.totalAmount.toFixed(2)}</dd>
                           </div>
