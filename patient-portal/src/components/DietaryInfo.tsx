@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navigation from './Navigation';
+import { useWaterTracking } from '../context/WaterTrackingContext';
+import { nutritionService } from '../services/nutritionService';
 
 interface NutritionFact {
   id: string;
@@ -19,6 +21,24 @@ interface DietaryGuide {
 
 const DietaryInfo: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'facts' | 'guides' | 'tips'>('facts');
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  
+  // Add water tracking
+  const { currentIntake, dailyGoal, logWater, getProgress } = useWaterTracking();
+
+  // Add download function
+  const handleDownloadGuide = async () => {
+    try {
+      setIsDownloading(true);
+      setDownloadError(null);
+      await nutritionService.downloadNutritionGuide();
+    } catch (error) {
+      setDownloadError('Failed to download nutrition guide. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const nutritionFacts: NutritionFact[] = [
     {
@@ -361,19 +381,63 @@ const DietaryInfo: React.FC = () => {
                     Daily Hydration Goal
                   </h3>
                   <p className="text-gray-600 mb-4">Track your daily water intake to ensure proper hydration during recovery.</p>
+                  
+                  {/* Progress Bar */}
+                  <div className="mb-4">
+                    <div className="flex justify-between text-sm text-gray-600 mb-2">
+                      <span>Progress</span>
+                      <span>{Math.round(getProgress())}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div 
+                        className="bg-blue-600 h-3 rounded-full transition-all duration-300 ease-in-out"
+                        style={{ width: `${Math.min(getProgress(), 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
                   <div className="flex items-center justify-between bg-white rounded-lg p-4">
                     <div className="flex items-center">
-                      <span className="text-2xl font-bold text-blue-600">0/8</span>
+                      <span className="text-2xl font-bold text-blue-600">{currentIntake}/{dailyGoal}</span>
                       <span className="ml-2 text-gray-600">glasses of water</span>
+                      {currentIntake >= dailyGoal && (
+                        <span className="ml-2 text-green-500">
+                          <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        </span>
+                      )}
                     </div>
-                    <button
-                      type="button"
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
-                      onClick={() => alert('Hydration tracking functionality would be implemented here')}
-                    >
-                      Log Water
-                    </button>
+                    <div className="flex space-x-2">
+                      <button
+                        type="button"
+                        className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 text-sm"
+                        onClick={() => logWater(1)}
+                        disabled={currentIntake >= dailyGoal + 2}
+                      >
+                        +1 Glass
+                      </button>
+                      <button
+                        type="button"
+                        className="px-3 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors duration-200 text-sm"
+                        onClick={() => logWater(0.5)}
+                        disabled={currentIntake >= dailyGoal + 2}
+                      >
+                        +½ Glass
+                      </button>
+                    </div>
                   </div>
+
+                  {currentIntake >= dailyGoal && (
+                    <div className="mt-4 p-3 bg-green-100 border border-green-200 rounded-lg">
+                      <p className="text-green-800 text-sm font-medium flex items-center">
+                        <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        Great job! You've reached your daily hydration goal!
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -410,15 +474,33 @@ const DietaryInfo: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => alert('Download nutrition guide functionality would be implemented here')}
-                  className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+                  onClick={handleDownloadGuide}
+                  disabled={isDownloading}
+                  className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <svg className="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Download Nutrition Guide
+                  {isDownloading ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Download Nutrition Guide
+                    </>
+                  )}
                 </button>
               </div>
+              {downloadError && (
+                <div className="mt-4 bg-red-50 border border-red-200 rounded-md p-3">
+                  <p className="text-red-700 text-sm">{downloadError}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -466,7 +548,7 @@ const DietaryInfo: React.FC = () => {
               className="inline-flex items-center justify-center px-4 py-3 border border-transparent text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
             >
               <svg className="h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
               View Orders
             </Link>

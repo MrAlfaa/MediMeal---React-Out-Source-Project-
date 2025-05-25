@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
 
 interface CartItem {
   id: string;
@@ -10,27 +11,15 @@ interface CartItem {
 
 const Cart: React.FC = () => {
   const navigate = useNavigate();
-  
-  // In a real app, this would come from a cart context or state management
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    { id: '1', name: 'Vegetable Soup', price: 5.99, quantity: 1 },
-    { id: '3', name: 'Whole Grain Pasta', price: 7.99, quantity: 1 }
-  ]);
-  
-  const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const { cartItems, updateQuantity, removeFromCart, cartTotal, cartCount } = useCart();
   
   const handleQuantityChange = (id: string, newQuantity: number) => {
     if (newQuantity < 1) return;
-    
-    setCartItems(prevItems => 
-      prevItems.map(item => 
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
-    );
+    updateQuantity(id, newQuantity);
   };
   
   const handleRemoveItem = (id: string) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id !== id));
+    removeFromCart(id);
   };
   
   const handleCheckout = () => {
@@ -48,7 +37,7 @@ const Cart: React.FC = () => {
                 <svg className="h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
-                <span className="ml-2 text-xl font-bold text-gray-900">Your Cart</span>
+                <span className="ml-2 text-xl font-bold text-gray-900">Your Cart ({cartCount} items)</span>
               </Link>
             </div>
           </div>
@@ -81,19 +70,31 @@ const Cart: React.FC = () => {
               ) : (
                 <ul className="divide-y divide-gray-200">
                   {cartItems.map(item => (
-                    <li key={item.id} className="px-4 py-4 sm:px-6">
+                    <li key={item._id} className="px-4 py-4 sm:px-6">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center">
+                          <img 
+                            src={item.image} 
+                            alt={item.name}
+                            className="w-16 h-16 rounded-lg object-cover mr-4"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c';
+                            }}
+                          />
                           <div className="ml-3">
                             <p className="text-sm font-medium text-gray-900">{item.name}</p>
                             <p className="text-sm text-gray-500">${item.price.toFixed(2)} each</p>
+                            <p className="text-xs text-gray-400">{item.category}</p>
+                            {item.allergens && item.allergens.length > 0 && (
+                              <p className="text-xs text-red-500">Allergens: {item.allergens.join(', ')}</p>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center">
                           <button
                             type="button"
                             className="text-gray-400 hover:text-gray-500"
-                            onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                            onClick={() => handleQuantityChange(item._id, item.quantity - 1)}
                             title="Decrease quantity"
                             aria-label="Decrease quantity"
                           >
@@ -101,11 +102,11 @@ const Cart: React.FC = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                           </button>
-                          <span className="mx-2 text-gray-700">{item.quantity}</span>
+                          <span className="mx-2 text-gray-700 font-medium min-w-[2rem] text-center">{item.quantity}</span>
                           <button
                             type="button"
                             className="text-gray-400 hover:text-gray-500"
-                            onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                            onClick={() => handleQuantityChange(item._id, item.quantity + 1)}
                             title="Increase quantity"
                             aria-label="Increase quantity"
                           >
@@ -116,7 +117,7 @@ const Cart: React.FC = () => {
                           <button
                             type="button"
                             className="ml-4 text-red-400 hover:text-red-500"
-                            onClick={() => handleRemoveItem(item.id)}
+                            onClick={() => handleRemoveItem(item._id)}
                             title="Remove item"
                             aria-label="Remove item"
                           >
@@ -124,6 +125,9 @@ const Cart: React.FC = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>
+                          <div className="ml-4 text-right">
+                            <p className="text-sm font-medium text-gray-900">${(item.price * item.quantity).toFixed(2)}</p>
+                          </div>
                         </div>
                       </div>
                     </li>
@@ -138,7 +142,7 @@ const Cart: React.FC = () => {
                 <dl className="space-y-4">
                   <div className="flex items-center justify-between">
                     <dt className="text-sm text-gray-600">Subtotal</dt>
-                    <dd className="text-sm font-medium text-gray-900">${subtotal.toFixed(2)}</dd>
+                    <dd className="text-sm font-medium text-gray-900">${cartTotal.toFixed(2)}</dd>
                   </div>
                   <div className="flex items-center justify-between">
                     <dt className="text-sm text-gray-600">Delivery Fee</dt>
@@ -146,7 +150,7 @@ const Cart: React.FC = () => {
                   </div>
                   <div className="border-t border-gray-200 pt-4 flex items-center justify-between">
                     <dt className="text-base font-medium text-gray-900">Total</dt>
-                    <dd className="text-base font-medium text-indigo-600">${subtotal.toFixed(2)}</dd>
+                    <dd className="text-base font-medium text-indigo-600">${cartTotal.toFixed(2)}</dd>
                   </div>
                 </dl>
                 

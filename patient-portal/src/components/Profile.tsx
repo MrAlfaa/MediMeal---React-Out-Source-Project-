@@ -1,9 +1,11 @@
-import React, { useState, useContext, useEffect } from 'react';
+
 import { Link } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
+import axios from 'axios';
+import React, { useState, useContext, useEffect } from 'react';
 
 const Profile: React.FC = () => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, updateUser } = useContext(AuthContext);
   
   const [formData, setFormData] = useState({
     fullName: user?.fullName || '',
@@ -19,9 +21,35 @@ const Profile: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('personal');
+  const [profileStats, setProfileStats] = useState({
+    totalOrders: 0,
+    favoriteItems: [],
+    lastOrderDate: null
+  });
+  const [preferences, setPreferences] = useState({
+    notifications: false,
+    mealReminders: true,
+    emailUpdates: false
+  });
   
+  // Load profile statistics
   useEffect(() => {
-    // Reset form data when user changes
+    const fetchProfileStats = async () => {
+      try {
+        const response = await axios.get('/user/profile-stats');
+        setProfileStats(response.data);
+      } catch (err) {
+        console.error('Error fetching profile stats:', err);
+      }
+    };
+    
+    if (user) {
+      fetchProfileStats();
+    }
+  }, [user]);
+  
+  // Reset form data when user changes
+  useEffect(() => {
     if (user) {
       setFormData({
         fullName: user.fullName || '',
@@ -48,23 +76,44 @@ const Profile: React.FC = () => {
       setIsSubmitting(true);
       setError('');
       
-      // In a real app, this would be an API call to update the user profile
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const updateData = {
+        ...formData,
+        dietaryRestrictions: formData.dietaryRestrictions
+          .split(',')
+          .map(item => item.trim())
+          .filter(item => item.length > 0)
+      };
+      
+      const response = await axios.put('/user/profile', updateData);
+      
+      if (updateUser) {
+        updateUser(response.data.user);
+      }
       
       setSuccessMessage('Profile updated successfully!');
       setIsEditing(false);
       
-      // Clear success message after 3 seconds
       setTimeout(() => {
         setSuccessMessage('');
       }, 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to update profile');
+      setError(err.response?.data?.message || 'Failed to update profile');
     } finally {
       setIsSubmitting(false);
     }
   };
-  
+
+  const handlePreferenceChange = async (preference: string, value: boolean) => {
+    try {
+      setPreferences(prev => ({ ...prev, [preference]: value }));
+      await axios.put('/user/preferences', { [preference]: value });
+    } catch (err) {
+      console.error('Error updating preferences:', err);
+      // Revert on error
+      setPreferences(prev => ({ ...prev, [preference]: !value }));
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -123,24 +172,37 @@ const Profile: React.FC = () => {
             </div>
           )}
           
-          <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-            {/* Profile Header with Avatar */}
+          {/* Profile Statistics Card */}
+          <div className="mb-6 bg-white shadow overflow-hidden sm:rounded-lg">
             <div className="px-4 py-5 sm:px-6 bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
-              <div className="flex items-center">
-                <div className="flex-shrink-0 h-20 w-20 rounded-full bg-white p-1">
-                  <div className="h-full w-full rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 text-2xl font-bold">
-                    {user?.fullName?.charAt(0) || 'P'}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 h-20 w-20 rounded-full bg-white p-1">
+                    <div className="h-full w-full rounded-full bg-indigo-100 flex items-center justify-center text-indigo-500 text-2xl font-bold">
+                      {user?.fullName?.charAt(0) || 'P'}
+                    </div>
                   </div>
-                </div>
-                <div className="ml-6">
-                  <h3 className="text-2xl font-bold">{user?.fullName}</h3>
-                  <p className="text-indigo-100">Patient ID: {user?.patientId}</p>
+                  <div className="ml-6">
+                    <h3 className="text-2xl font-bold">{user?.fullName}</h3>
+                    <p className="text-indigo-100">Patient ID: {user?.patientId}</p>
+                    <div className="mt-2 flex space-x-4 text-sm">
+                      <span className="bg-white bg-opacity-20 px-2 py-1 rounded">
+                        Total Orders: {profileStats.totalOrders}
+                      </span>
+                      <span className="bg-white bg-opacity-20 px-2 py-1 rounded">
+                        Ward: {user?.wardNumber}
+                      </span>
+                      <span className="bg-white bg-opacity-20 px-2 py-1 rounded">
+                        Bed: {user?.bedNumber}
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 {!isEditing && (
                   <button
                     type="button"
                     onClick={() => setIsEditing(true)}
-                    className="ml-auto inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-indigo-600 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white"
+                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-indigo-600 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white"
                   >
                     <svg className="h-4 w-4 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -150,6 +212,7 @@ const Profile: React.FC = () => {
                 )}
               </div>
             </div>
+          </div>
             
             {/* Profile Tabs */}
             <div className="border-b border-gray-200">
@@ -199,7 +262,8 @@ const Profile: React.FC = () => {
                         id="fullName"
                         value={formData.fullName}
                         onChange={handleChange}
-                        className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                        className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-400"
+                        placeholder="Enter your full name"
                       />
                     </div>
 
@@ -211,7 +275,8 @@ const Profile: React.FC = () => {
                         id="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                        className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-400"
+                        placeholder="Enter your email"
                       />
                     </div>
 
@@ -223,7 +288,8 @@ const Profile: React.FC = () => {
                         id="contactNumber"
                         value={formData.contactNumber}
                         onChange={handleChange}
-                        className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                        className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-400"
+                        placeholder="Enter your contact number"
                       />
                     </div>
 
@@ -235,7 +301,7 @@ const Profile: React.FC = () => {
                         rows={3}
                         value={formData.dietaryRestrictions}
                         onChange={handleChange}
-                        className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                        className="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-400"
                         placeholder="e.g., Gluten-free, Dairy-free, Vegetarian (comma separated)"
                       />
                     </div>
@@ -252,7 +318,7 @@ const Profile: React.FC = () => {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                     >
                       {isSubmitting ? (
                         <>
@@ -349,11 +415,78 @@ const Profile: React.FC = () => {
                   
                   {activeTab === 'preferences' && (
                     <div className="px-4 py-5 sm:p-6">
-                      <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Meal Preferences</h3>
+                      <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Account & Meal Preferences</h3>
                       
                       <div className="space-y-6">
+                        {/* Notification Settings */}
                         <div>
-                          <h4 className="text-sm font-medium text-gray-500 mb-2">Dietary Restrictions</h4>
+                          <h4 className="text-sm font-medium text-gray-900 mb-4">Notification Settings</h4>
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">Order notifications</p>
+                                <p className="text-sm text-gray-500">Get notified about order status updates</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handlePreferenceChange('notifications', !preferences.notifications)}
+                                className={`${
+                                  preferences.notifications ? 'bg-indigo-600' : 'bg-gray-200'
+                                } relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+                              >
+                                <span
+                                  className={`${
+                                    preferences.notifications ? 'translate-x-5' : 'translate-x-0'
+                                  } pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}
+                                />
+                              </button>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">Meal reminders</p>
+                                <p className="text-sm text-gray-500">Remind me about meal times</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handlePreferenceChange('mealReminders', !preferences.mealReminders)}
+                                className={`${
+                                  preferences.mealReminders ? 'bg-indigo-600' : 'bg-gray-200'
+                                } relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+                              >
+                                <span
+                                  className={`${
+                                    preferences.mealReminders ? 'translate-x-5' : 'translate-x-0'
+                                  } pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}
+                                />
+                              </button>
+                            </div>
+                            
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">Email updates</p>
+                                <p className="text-sm text-gray-500">Receive email updates about new menu items</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handlePreferenceChange('emailUpdates', !preferences.emailUpdates)}
+                                className={`${
+                                  preferences.emailUpdates ? 'bg-indigo-600' : 'bg-gray-200'
+                                } relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+                              >
+                                <span
+                                  className={`${
+                                    preferences.emailUpdates ? 'translate-x-5' : 'translate-x-0'
+                                  } pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200`}
+                                />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Dietary Restrictions */}
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-900 mb-2">Current Dietary Restrictions</h4>
                           {Array.isArray(user?.dietaryRestrictions) && user.dietaryRestrictions.length > 0 ? (
                             <div className="flex flex-wrap gap-2">
                               {user.dietaryRestrictions.map((restriction, index) => (
@@ -366,61 +499,30 @@ const Profile: React.FC = () => {
                             <p className="text-sm text-gray-500">No dietary restrictions specified</p>
                           )}
                         </div>
-                        
+
+                        {/* Account Actions */}
                         <div>
-                          <h4 className="text-sm font-medium text-gray-500 mb-2">Favorite Meals</h4>
-                          <div className="bg-gray-50 rounded-md p-4">
-                            <p className="text-sm text-gray-500">
-                              Your favorite meals will appear here based on your order history.
-                            </p>
-                            <Link 
-                              to="/menu" 
-                              className="mt-3 inline-flex items-center text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                          <h4 className="text-sm font-medium text-gray-900 mb-4">Account Actions</h4>
+                          <div className="space-y-3">
+                            <button
+                              onClick={() => setIsEditing(true)}
+                              className="w-full flex justify-between items-center px-4 py-3 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                             >
-                              Browse menu
-                              <svg className="ml-1 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                              <span>Edit Profile Information</span>
+                              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                            
+                            <Link
+                              to="/orders"
+                              className="w-full flex justify-between items-center px-4 py-3 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            >
+                              <span>View Order History</span>
+                              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                               </svg>
                             </Link>
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-500 mb-2">Meal Delivery Preferences</h4>
-                          <div className="bg-white border border-gray-200 rounded-md divide-y divide-gray-200">
-                            <div className="p-4 flex justify-between items-center">
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">Preferred meal times</p>
-                                <p className="text-sm text-gray-500">Set your preferred times for meal delivery</p>
-                              </div>
-                              <button
-                                type="button"
-                                className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                              >
-                                Set times
-                              </button>
-                            </div>
-                            <div className="p-4 flex justify-between items-center">
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">Notification preferences</p>
-                                <p className="text-sm text-gray-500">Get notified when your meal is on the way</p>
-                              </div>
-                              <div className="flex items-center">
-                                <span className="text-xs text-gray-500 mr-2">Off</span>
-                                <button
-                                  type="button"
-                                  className="relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 bg-gray-200"
-                                  role="switch"
-                                  aria-checked="false"
-                                >
-                                  <span className="sr-only">Use setting</span>
-                                  <span
-                                    aria-hidden="true"
-                                    className="translate-x-0 pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200"
-                                  ></span>
-                                </button>
-                              </div>
-                            </div>
                           </div>
                         </div>
                       </div>
@@ -623,7 +725,7 @@ const Profile: React.FC = () => {
           </div>
         </div>
       </div>
-    </div>
+    
   );
 };
 

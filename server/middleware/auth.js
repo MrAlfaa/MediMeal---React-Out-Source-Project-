@@ -17,8 +17,10 @@ module.exports = function(req, res, next) {
     
     // Add user from payload
     req.user = decoded;
+    console.log('Auth middleware - decoded user:', decoded); // Add debugging
     next();
   } catch (err) {
+    console.error('Auth middleware error:', err);
     res.status(401).json({ message: 'Token is not valid' });
   }
 };

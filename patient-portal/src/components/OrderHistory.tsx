@@ -94,11 +94,35 @@ const OrderHistory: React.FC = () => {
       month: 'long', 
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      hour12: true
     };
     return new Date(dateString).toLocaleDateString(undefined, options);
   };
-  
+
+  const formatDeliveryTime = (dateString: string) => {
+    const deliveryDate = new Date(dateString);
+    const now = new Date();
+    const isToday = deliveryDate.toDateString() === now.toDateString();
+    const isTomorrow = deliveryDate.toDateString() === new Date(now.getTime() + 24 * 60 * 60 * 1000).toDateString();
+    
+    let dayText = '';
+    if (isToday) {
+      dayText = 'Today';
+    } else if (isTomorrow) {
+      dayText = 'Tomorrow';
+    } else {
+      dayText = deliveryDate.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' });
+    }
+    
+    const timeText = deliveryDate.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
+    
+    return `${dayText} at ${timeText}`;
+  };  
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -185,7 +209,7 @@ const OrderHistory: React.FC = () => {
                             {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
                           </p>
                           <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
-                            Delivery: {formatDate(order.deliveryTime)}
+                            Delivery: {formatDeliveryTime(order.deliveryTime)}
                           </p>
                         </div>
                         <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
