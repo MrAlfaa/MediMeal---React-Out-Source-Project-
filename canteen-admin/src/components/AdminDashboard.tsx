@@ -3,6 +3,7 @@ import { AuthContext } from '../context/AuthContext';
 import Sidebar from './Sidebar';
 import MenuManagement from './MenuManagement';
 import OrderManagement from './OrderManagement';
+import UserManagement from './UserManagement';
 import Charts from './Charts';
 import orderService, { Order } from '../services/orderService';
 import menuService, { MenuItem } from '../services/menuService';
@@ -465,6 +466,8 @@ const AdminDashboard: React.FC = () => {
         return <MenuManagement />;
       case 'orders':
         return <OrderManagement />;
+      case 'users':
+        return <UserManagement />;
       case 'dashboard':
         return renderDashboardContent();
       default:
