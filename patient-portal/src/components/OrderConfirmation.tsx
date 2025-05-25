@@ -35,39 +35,130 @@ interface OrderConfirmationState {
 
 const OrderConfirmation: React.FC = () => {
   const location = useLocation();
-  const orderData = location.state as OrderConfirmationState;
   
-  // If no order data is present, redirect to home
-  if (!orderData || !orderData.order) {
-    return <Navigate to="/" />;
+  // Add debugging
+  console.log('OrderConfirmation - location:', location);
+  console.log('OrderConfirmation - location.state:', location.state);
+  
+  // Handle different possible data structures
+  let orderData = location.state as OrderConfirmationState;
+  
+  // Check if order data is nested differently
+  if (!orderData?.order && location.state) {
+    // Try to extract order from different possible structures
+    if ((location.state as any).order) {
+      orderData = { order: (location.state as any).order };
+    }
   }
   
-  const { order } = orderData;
+  // If still no order data, try to get from localStorage as fallback
+  if (!orderData?.order) {
+    console.log('No order data in location state, checking localStorage');
+    const lastOrderData = localStorage.getItem('lastOrder');
+    if (lastOrderData) {
+      try {
+        const parsedOrder = JSON.parse(lastOrderData);
+        orderData = { order: parsedOrder };
+        console.log('Retrieved order from localStorage:', orderData);
+      } catch (error) {
+        console.error('Error parsing order from localStorage:', error);
+      }
+    }
+  }
   
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'local' // Use local timezone
-    };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+  // If still no order data, show error message
+  if (!orderData?.order) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <svg className="mx-auto h-12 w-12 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h2 className="mt-4 text-xl font-semibold text-gray-900">Order confirmation not found</h2>
+          <p className="mt-2 text-gray-600">Unable to load order details. This might happen if you refreshed the page.</p>
+          <div className="mt-6 space-x-3">
+            <Link
+              to="/orders"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+            >
+              View Recent Orders
+            </Link>
+            <Link
+              to="/menu"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+            >
+              Back to Menu
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  const { order } = orderData;  // Error boundary-like behavior
+  try {
+    if (!order) {
+      throw new Error('Order data is missing');
+    }
+    
+    if (!order._id || !order.orderNumber) {
+      throw new Error('Invalid order data structure');
+    }
+  } catch (error) {
+    console.error('OrderConfirmation error:', error);
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <svg className="mx-auto h-12 w-12 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h2 className="mt-4 text-xl font-semibold text-gray-900">Something went wrong</h2>
+          <p className="mt-2 text-gray-600">Unable to display order confirmation.</p>
+          <p className="mt-1 text-sm text-gray-500">Error: {error.message}</p>
+          <div className="mt-6">
+            <Link
+              to="/orders"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+            >
+              View Orders
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }  const formatDate = (dateString: string) => {
+    try {
+      const options: Intl.DateTimeFormatOptions = { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      };
+      return new Date(dateString).toLocaleDateString(undefined, options);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
   };
   
   const formatDeliveryTime = (dateString: string) => {
-    const deliveryDate = new Date(dateString);
-    const options: Intl.DateTimeFormatOptions = { 
-      weekday: 'long',
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    };
-    return deliveryDate.toLocaleDateString(undefined, options);
+    try {
+      const deliveryDate = new Date(dateString);
+      const options: Intl.DateTimeFormatOptions = { 
+        weekday: 'long',
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      };
+      return deliveryDate.toLocaleDateString(undefined, options);
+    } catch (error) {
+      console.error('Error formatting delivery time:', error);
+      return 'Invalid delivery time';
+    }
   };  
   const getPaymentMethodDisplay = (method: string) => {
     switch (method) {

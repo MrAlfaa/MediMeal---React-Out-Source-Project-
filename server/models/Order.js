@@ -145,6 +145,19 @@ orderSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
+
+// Add validation for required fields
+orderSchema.pre('validate', function(next) {
+  // Ensure deliveryTime is a valid date
+  if (this.deliveryDetails && this.deliveryDetails.deliveryTime) {
+    const deliveryTime = new Date(this.deliveryDetails.deliveryTime);
+    if (isNaN(deliveryTime.getTime())) {
+      this.invalidate('deliveryDetails.deliveryTime', 'Invalid delivery time');
+    }
+  }
+  next();
+});
+
 const Order = mongoose.model('Order', orderSchema);
 
 module.exports = Order;

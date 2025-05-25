@@ -66,58 +66,25 @@ router.post('/', auth, async (req, res) => {
       return res.status(400).json({ message: 'Payment details are required' });
     }
 
-    // Generate order number
-    const timestamp = Date.now().toString();
-    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    const orderNumber = `ORD-${timestamp.slice(-6)}-${random}`;
-
-    // Create the order object
-    const orderData = {
+    // Create the order
+    const order = new Order({
       user: req.user.userId,
-      items: items.map(item => ({
-        menuItem: item.menuItem || item._id,
-        name: item.name,
-        description: item.description,
-        image: item.image,
-        quantity: item.quantity,
-        price: item.price,
-        category: item.category,
-        nutritionalInfo: item.nutritionalInfo || {},
-        allergens: item.allergens || []
-      })),
+      items,
       totalAmount,
-      deliveryDetails: {
-        wardNumber: deliveryDetails.wardNumber,
-        bedNumber: deliveryDetails.bedNumber,
-        deliveryTime: new Date(deliveryDetails.deliveryTime),
-        specialInstructions: deliveryDetails.specialInstructions || ''
-      },
-      paymentDetails: {
-        method: paymentDetails.method,
-        status: paymentDetails.method === 'cash' ? 'pending' : 'processing',
-        subtotal: paymentDetails.subtotal || totalAmount,
-        deliveryFee: paymentDetails.deliveryFee || 0,
-        tax: paymentDetails.tax || 0,
-        totalPaid: paymentDetails.totalPaid || totalAmount,
-        ...(paymentDetails.cardDetails && { cardDetails: paymentDetails.cardDetails }),
-        ...(paymentDetails.hospitalAccountId && { hospitalAccountId: paymentDetails.hospitalAccountId })
-      },
-      orderNumber, // Explicitly set the order number
+      deliveryDetails,
+      paymentDetails,
       status: 'pending'
-    };
+    });
 
-    console.log('Final order data:', orderData);
-
-    // Create and save the order
-    const order = new Order(orderData);
+    // Save the order
     const savedOrder = await order.save();
 
-    console.log('Order saved successfully:', savedOrder._id);
-
-    // Populate the order with user details for response
+    // Populate the menuItem references
     const populatedOrder = await Order.findById(savedOrder._id)
-      .populate('user', 'fullName email wardNumber bedNumber')
-      .populate('items.menuItem', 'name price category');
+      .populate('items.menuItem')
+      .populate('user', 'fullName email wardNumber bedNumber');
+
+    console.log('Order created successfully:', populatedOrder);
 
     res.status(201).json({
       message: 'Order created successfully',
@@ -126,25 +93,13 @@ router.post('/', auth, async (req, res) => {
 
   } catch (error) {
     console.error('Error creating order:', error);
-    console.error('Error details:', error.message);
-    console.error('Error stack:', error.stack);
-    
-    if (error.name === 'ValidationError') {
-      const validationErrors = Object.values(error.errors).map(err => err.message);
-      return res.status(400).json({ 
-        message: 'Validation failed', 
-        errors: validationErrors,
-        details: error.errors
-      });
-    }
-    
     res.status(500).json({ 
-      message: 'Server error while creating order', 
-      error: error.message 
+      message: 'Server error', 
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
-});
-// Update order status (admin only)
+});// Update order status (admin only)
 router.patch('/:id/status', auth, async (req, res) => {
   try {
     // Check if user is admin

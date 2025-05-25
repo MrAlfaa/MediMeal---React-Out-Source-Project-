@@ -108,29 +108,45 @@ const Checkout: React.FC = () => {
           })
         }
       };
-      
+    
       console.log('Sending order data:', orderData);
-      
+    
       const response = await axios.post('/orders', orderData);
-      
+    
       console.log('Order response:', response.data);
+    
+      if (response.data && response.data.order) {
+        // Store order in localStorage as backup
+        localStorage.setItem('lastOrder', JSON.stringify(response.data.order));
       
-      // Clear cart and navigate to confirmation
-      clearCart();
-      navigate('/order-confirmation', { 
-        state: { 
-          order: response.data.order
-        } 
-      });
+        // Clear cart and navigate to confirmation
+        clearCart();
+        navigate('/order-confirmation', { 
+          state: { 
+            order: response.data.order
+          }
+        });
+      } else {
+        throw new Error('Invalid response format from server');
+      }
+    
     } catch (err: any) {
       console.error('Error placing order:', err);
       console.error('Error response:', err.response?.data);
-      setError(err.response?.data?.message || 'Failed to place order. Please try again.');
+    
+      if (err.response?.status === 401) {
+        setError('Your session has expired. Please log in again.');
+      } else if (err.response?.status === 400) {
+        setError(err.response.data?.message || 'Invalid order data. Please check your information.');
+      } else if (err.response?.status >= 500) {
+        setError('Server error. Please try again later.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to place order. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
-  };  
-  // Generate delivery time options (every 30 minutes for the next 8 hours)
+  };    // Generate delivery time options (every 30 minutes for the next 8 hours)
   const getDeliveryTimeOptions = () => {
     const options = [];
     const now = new Date();
@@ -141,22 +157,20 @@ const Checkout: React.FC = () => {
       const time = new Date(startTime);
       time.setMinutes(time.getMinutes() + (i * 30));
       
-      const formattedTime = time.toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true
-      });
-      
-      const formattedDate = time.toLocaleDateString([], {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric'
-      });
-      
-      options.push({
-        value: time.toISOString(),
-        label: `${formattedDate} at ${formattedTime}`,
-        displayTime: time.toLocaleString([], {
+      try {
+        const formattedTime = time.toLocaleTimeString([], { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true
+        });
+        
+        const formattedDate = time.toLocaleDateString([], {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric'
+        });
+        
+        const displayTime = time.toLocaleString([], {
           weekday: 'long',
           year: 'numeric',
           month: 'long',
@@ -164,8 +178,17 @@ const Checkout: React.FC = () => {
           hour: '2-digit',
           minute: '2-digit',
           hour12: true
-        })
-      });
+        });
+        
+        options.push({
+          value: time.toISOString(),
+          label: `${formattedDate} at ${formattedTime}`,
+          displayTime: displayTime
+        });
+      } catch (error) {
+        console.error('Error formatting time option:', error);
+        // Skip this option if formatting fails
+      }
     }
     
     return options;
