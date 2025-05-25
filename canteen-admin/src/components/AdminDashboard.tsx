@@ -9,6 +9,7 @@ import Charts from './Charts';
 import orderService, { Order } from '../services/orderService';
 import menuService, { MenuItem } from '../services/menuService';
 import userService from '../services/userService';
+import Settings from './Settings';
 
 interface DashboardStats {
   totalMenuItems: number;
@@ -471,6 +472,8 @@ const AdminDashboard: React.FC = () => {
         return <UserManagement />;
       case 'analytics':
         return <Analytics />;
+      case 'settings':
+        return <Settings />;
       case 'dashboard':
         return renderDashboardContent();
       default:

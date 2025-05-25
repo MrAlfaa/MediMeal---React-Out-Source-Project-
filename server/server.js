@@ -31,6 +31,7 @@ const analyticsRoutes = require('./routes/analytics');
 const auth = require('./middleware/auth');
 const nutritionRoutes = require('./routes/nutrition');
 const userRoutes = require('./routes/user');
+const adminSettingsRoutes = require('./routes/adminSettings');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -41,6 +42,7 @@ app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/nutrition', nutritionRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/admin/settings', adminSettingsRoutes);
 
 // Define basic route
 app.get('/', (req, res) => {
