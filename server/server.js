@@ -11,7 +11,8 @@ app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:5174'], // Allow both portals
   credentials: true
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // Increase limit for image uploads
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // MongoDB Atlas Connection with improved error handling
 mongoose.connect(process.env.MONGODB_URI)
@@ -22,42 +23,33 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // Import routes
 const authRoutes = require('./routes/auth');
-
-// Create menu and orders routes if they don't exist
-let menuRoutes, orderRoutes;
-try {
-  menuRoutes = require('./routes/menu');
-} catch (err) {
-  // Create a simple router if menu routes don't exist
-  menuRoutes = express.Router();
-  menuRoutes.get('/', (req, res) => {
-    res.json({ message: 'Menu routes working', items: [] });
-  });
-}
-
-try {
-  orderRoutes = require('./routes/orders');
-} catch (err) {
-  // Create a simple router if order routes don't exist
-  orderRoutes = express.Router();
-  orderRoutes.get('/', (req, res) => {
-    res.json({ message: 'Order routes working', orders: [] });
-  });
-}
-
+const menuRoutes = require('./routes/menu');
+const orderRoutes = require('./routes/orders');
+const adminOrderRoutes = require('./routes/adminOrders');
+const adminUserRoutes = require('./routes/adminUsers');
+const analyticsRoutes = require('./routes/analytics');
 const auth = require('./middleware/auth');
+const nutritionRoutes = require('./routes/nutrition');
+const userRoutes = require('./routes/user');
+const adminSettingsRoutes = require('./routes/adminSettings');
 
 // Use routes
 app.use('/api/auth', authRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/orders/admin', adminOrderRoutes);
+app.use('/api/admin/users', adminUserRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/nutrition', nutritionRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/admin/settings', adminSettingsRoutes);
 
 // Define basic route
 app.get('/', (req, res) => {
   res.send('Hospital Food Ordering API is running');
 });
 
-// Add this route near your other routes
+// Health check route
 app.get('/api/status', (req, res) => {
   const dbState = mongoose.connection.readyState;
   const dbStatus = {
@@ -69,7 +61,8 @@ app.get('/api/status', (req, res) => {
   
   res.json({
     server: 'running',
-    database: dbStatus[dbState] || 'unknown'
+    database: dbStatus[dbState] || 'unknown',
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -90,10 +83,15 @@ app.get('/api/profile', auth, async (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  console.error(err.stack);
+  console.error('=== Server Error ===');
+  console.error('Timestamp:', new Date().toISOString());
+  console.error('Request URL:', req.originalUrl);
+  console.error('Request Method:', req.method);
+  console.error('Request Body:', req.body);
+  console.error('Error:', err);
+  console.error('Error Stack:', err.stack);
+  console.error('==================');
   
-  // Send appropriate error response
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({ 
     message: err.message || 'Something went wrong on the server', 
@@ -101,7 +99,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler for unmatched routes - FIXED: Use proper route pattern
+// 404 handler for unmatched routes
 app.use((req, res) => {
   console.log(`Route not found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({ 

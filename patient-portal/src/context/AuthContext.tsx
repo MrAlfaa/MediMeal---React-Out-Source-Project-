@@ -2,11 +2,12 @@ import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+
 interface User {
   id: string;
   fullName: string;
   email: string;
-  role: 'user' | 'admin' | 'superadmin';
+  role: 'user' | 'admin' | 'superadmin' | 'patient';
   wardNumber: string;
   bedNumber: string;
   patientId: string;
@@ -22,6 +23,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (userData: any) => Promise<any>;
   logout: () => void;
+  updateUser: (userData: User) => void;
   error: string | null;
 }
 
@@ -33,6 +35,7 @@ export const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   register: async () => {},
   logout: () => {},
+  updateUser: () => {},
   error: null
 });
 
@@ -142,6 +145,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsAuthenticated(false);
     navigate('/login');
   };
+
+  const updateUser = (userData: User) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
   
   return (
     <AuthContext.Provider
@@ -153,6 +161,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         login,
         register,
         logout,
+        updateUser,
         error
       }}
     >

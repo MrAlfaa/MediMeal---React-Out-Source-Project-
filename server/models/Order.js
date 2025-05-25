@@ -13,6 +13,18 @@ const orderSchema = new mongoose.Schema({
         ref: 'MenuItem',
         required: true
       },
+      name: {
+        type: String,
+        required: true
+      },
+      description: {
+        type: String,
+        required: true
+      },
+      image: {
+        type: String,
+        required: true
+      },
       quantity: {
         type: Number,
         required: true,
@@ -22,10 +34,17 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         required: true
       },
-      specialInstructions: {
+      category: {
         type: String,
-        default: ''
-      }
+        required: true
+      },
+      nutritionalInfo: {
+        calories: Number,
+        protein: Number,
+        carbs: Number,
+        fat: Number
+      },
+      allergens: [String]
     }
   ],
   totalAmount: {
@@ -34,8 +53,8 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Preparing', 'Ready', 'Delivered', 'Cancelled'],
-    default: 'Pending'
+    enum: ['pending', 'accepted', 'processing', 'ready', 'delivered', 'cancelled'],
+    default: 'pending'
   },
   deliveryDetails: {
     wardNumber: {
@@ -45,15 +64,67 @@ const orderSchema = new mongoose.Schema({
     bedNumber: {
       type: String,
       required: true
+    },
+    deliveryTime: {
+      type: Date,
+      required: true
+    },
+    specialInstructions: {
+      type: String,
+      default: ''
     }
   },
-  scheduledDeliveryTime: {
-    type: Date
+  paymentDetails: {
+    method: {
+      type: String,
+      enum: ['hospital-account', 'cash', 'card'],
+      required: true
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'processing', 'completed', 'failed'],
+      default: 'pending'
+    },
+    transactionId: {
+      type: String,
+      default: null
+    },
+    cardDetails: {
+      last4: String,
+      brand: String,
+      expiryMonth: Number,
+      expiryYear: Number
+    },
+    hospitalAccountId: {
+      type: String,
+      default: null
+    },
+    subtotal: {
+      type: Number,
+      required: true
+    },
+    deliveryFee: {
+      type: Number,
+      default: 0
+    },
+    tax: {
+      type: Number,
+      default: 0
+    },
+    totalPaid: {
+      type: Number,
+      required: true
+    }
   },
-  paymentMethod: {
+  orderNumber: {
     type: String,
-    enum: ['Hospital Account', 'Cash on Delivery', 'Online Payment'],
-    default: 'Hospital Account'
+    unique: true,
+    required: true,
+    default: function() {
+      const timestamp = Date.now().toString();
+      const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      return `ORD-${timestamp.slice(-6)}-${random}`;
+    }
   },
   createdAt: {
     type: Date,
@@ -65,9 +136,26 @@ const orderSchema = new mongoose.Schema({
   }
 });
 
-// Update the updatedAt field before saving
+// Generate order number before saving
 orderSchema.pre('save', function(next) {
+  if (this.isNew && !this.orderNumber) {
+    const timestamp = Date.now().toString();
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    this.orderNumber = `ORD-${timestamp.slice(-6)}-${random}`;
+  }
   this.updatedAt = Date.now();
+  next();
+});
+
+// Add validation for required fields
+orderSchema.pre('validate', function(next) {
+  // Ensure deliveryTime is a valid date
+  if (this.deliveryDetails && this.deliveryDetails.deliveryTime) {
+    const deliveryTime = new Date(this.deliveryDetails.deliveryTime);
+    if (isNaN(deliveryTime.getTime())) {
+      this.invalidate('deliveryDetails.deliveryTime', 'Invalid delivery time');
+    }
+  }
   next();
 });
 

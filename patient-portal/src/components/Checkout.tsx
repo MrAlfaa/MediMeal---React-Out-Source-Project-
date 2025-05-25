@@ -1,23 +1,13 @@
 import React, { useState, useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-}
+import { useCart } from '../context/CartContext';
+import axios from 'axios';
 
 const Checkout: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-  
-  // In a real app, this would come from a cart context or state management
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    { id: '1', name: 'Vegetable Soup', price: 5.99, quantity: 1 },
-    { id: '3', name: 'Whole Grain Pasta', price: 7.99, quantity: 1 }
-  ]);
+  const { cartItems, cartTotal, clearCart } = useCart();
   
   const [deliveryTime, setDeliveryTime] = useState('');
   const [specialInstructions, setSpecialInstructions] = useState('');
@@ -25,22 +15,28 @@ const Checkout: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const subtotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  // Card payment fields
+  const [cardDetails, setCardDetails] = useState({
+    cardNumber: '',
+    expiryMonth: '',
+    expiryYear: '',
+    cvv: '',
+    cardholderName: ''
+  });
+
+  // Hospital account fields
+  const [hospitalAccountId, setHospitalAccountId] = useState('');
+  
+  const subtotal = cartTotal;
   const deliveryFee = 0; // Free delivery within hospital
-  const total = subtotal + deliveryFee;
+  const tax = subtotal * 0.05; // 5% tax
+  const total = subtotal + deliveryFee + tax;
   
-  const handleQuantityChange = (id: string, newQuantity: number) => {
-    if (newQuantity < 1) return;
-    
-    setCartItems(prevItems => 
-      prevItems.map(item => 
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
-    );
-  };
-  
-  const handleRemoveItem = (id: string) => {
-    setCartItems(prevItems => prevItems.filter(item => item.id !== id));
+  const handleCardDetailsChange = (field: string, value: string) => {
+    setCardDetails(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,58 +51,148 @@ const Checkout: React.FC = () => {
       setError('Please select a delivery time');
       return;
     }
+
+    // Validate payment method specific fields
+    if (paymentMethod === 'card') {
+      if (!cardDetails.cardNumber || !cardDetails.expiryMonth || !cardDetails.expiryYear || !cardDetails.cvv || !cardDetails.cardholderName) {
+        setError('Please fill in all card details');
+        return;
+      }
+    }
+
+    if (paymentMethod === 'hospital-account' && !hospitalAccountId) {
+      setError('Please enter your hospital account ID');
+      return;
+    }
     
     try {
       setIsSubmitting(true);
       setError(null);
       
-      // In a real app, this would be an API call to create an order
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const orderData = {
+        items: cartItems.map(item => ({
+          menuItem: item._id,
+          name: item.name,
+          description: item.description,
+          image: item.image,
+          quantity: item.quantity,
+          price: item.price,
+          category: item.category,
+          nutritionalInfo: item.nutritionalInfo || {},
+          allergens: item.allergens || []
+        })),
+        totalAmount: total,
+        deliveryDetails: {
+          wardNumber: user?.wardNumber || '',
+          bedNumber: user?.bedNumber || '',
+          deliveryTime: deliveryTime,
+          specialInstructions: specialInstructions
+        },
+        paymentDetails: {
+          method: paymentMethod,
+          subtotal,
+          deliveryFee,
+          tax,
+          totalPaid: total,
+          status: paymentMethod === 'cash' ? 'pending' : 'processing',
+          ...(paymentMethod === 'card' && {
+            cardDetails: {
+              last4: cardDetails.cardNumber.slice(-4),
+              brand: 'visa', // You would detect this from card number
+              expiryMonth: parseInt(cardDetails.expiryMonth),
+              expiryYear: parseInt(cardDetails.expiryYear)
+            }
+          }),
+          ...(paymentMethod === 'hospital-account' && {
+            hospitalAccountId
+          })
+        }
+      };
+    
+      console.log('Sending order data:', orderData);
+    
+      const response = await axios.post('/orders', orderData);
+    
+      console.log('Order response:', response.data);
+    
+      if (response.data && response.data.order) {
+        // Store order in localStorage as backup
+        localStorage.setItem('lastOrder', JSON.stringify(response.data.order));
       
-      // Simulate successful order
-      navigate('/order-confirmation', { 
-        state: { 
-          orderId: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
-          orderDate: new Date().toISOString(),
-          deliveryTime,
-          items: cartItems,
-          total
-        } 
-      });
+        // Clear cart and navigate to confirmation
+        clearCart();
+        navigate('/order-confirmation', { 
+          state: { 
+            order: response.data.order
+          }
+        });
+      } else {
+        throw new Error('Invalid response format from server');
+      }
+    
     } catch (err: any) {
       console.error('Error placing order:', err);
-      setError(err.message || 'Failed to place order. Please try again.');
+      console.error('Error response:', err.response?.data);
+    
+      if (err.response?.status === 401) {
+        setError('Your session has expired. Please log in again.');
+      } else if (err.response?.status === 400) {
+        setError(err.response.data?.message || 'Invalid order data. Please check your information.');
+      } else if (err.response?.status >= 500) {
+        setError('Server error. Please try again later.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to place order. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
-  };
-  
-  // Generate delivery time options (every 30 minutes for the next 8 hours)
+  };    // Generate delivery time options (every 30 minutes for the next 8 hours)
   const getDeliveryTimeOptions = () => {
     const options = [];
     const now = new Date();
     const startTime = new Date(now);
-    startTime.setMinutes(Math.ceil(now.getMinutes() / 30) * 30); // Round up to next 30 min
+    startTime.setMinutes(Math.ceil(now.getMinutes() / 30) * 30, 0, 0); // Round up to next 30 min
     
-    for (let i = 0; i < 16; i++) {
+    for (let i = 1; i <= 16; i++) { // Start from 1 to give at least 30 min prep time
       const time = new Date(startTime);
       time.setMinutes(time.getMinutes() + (i * 30));
       
-      const formattedTime = time.toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: true
-      });
-      
-      options.push({
-        value: time.toISOString(),
-        label: formattedTime
-      });
+      try {
+        const formattedTime = time.toLocaleTimeString([], { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true
+        });
+        
+        const formattedDate = time.toLocaleDateString([], {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric'
+        });
+        
+        const displayTime = time.toLocaleString([], {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+        
+        options.push({
+          value: time.toISOString(),
+          label: `${formattedDate} at ${formattedTime}`,
+          displayTime: displayTime
+        });
+      } catch (error) {
+        console.error('Error formatting time option:', error);
+        // Skip this option if formatting fails
+      }
     }
     
     return options;
-  };
-  
+  };  
   const deliveryTimeOptions = getDeliveryTimeOptions();
   
   return (
@@ -116,7 +202,7 @@ const Checkout: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex">
-              <Link to="/menu" className="flex-shrink-0 flex items-center">
+              <Link to="/cart" className="flex-shrink-0 flex items-center">
                 <svg className="h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
@@ -166,79 +252,56 @@ const Checkout: React.FC = () => {
                   ) : (
                     <ul className="divide-y divide-gray-200">
                       {cartItems.map(item => (
-                        <li key={item.id} className="px-4 py-4 sm:px-6">
+                        <li key={item._id} className="px-4 py-4 sm:px-6">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center">
+                              <img 
+                                src={item.image} 
+                                alt={item.name}
+                                className="w-12 h-12 rounded-lg object-cover mr-3"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c';
+                                }}
+                              />
                               <div className="ml-3">
                                 <p className="text-sm font-medium text-gray-900">{item.name}</p>
-                                <p className="text-sm text-gray-500">${item.price.toFixed(2)} each</p>
+                                <p className="text-sm text-gray-500">${item.price.toFixed(2)} each × {item.quantity}</p>
+                                <p className="text-xs text-gray-400">{item.category}</p>
                               </div>
                             </div>
-                            <div className="flex items-center">
-                              <button
-                                type="button"
-                                className="text-gray-400 hover:text-gray-500"
-                                onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                                title="Decrease quantity"
-                                aria-label="Decrease quantity"
-                              >
-                                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                              </button>
-                              <span className="mx-2 text-gray-700">{item.quantity}</span>
-                              <button
-                                type="button"
-                                className="text-gray-400 hover:text-gray-500"
-                                onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                                title="Increase quantity"
-                                aria-label="Increase quantity"
-                              >
-                                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                className="ml-4 text-red-400 hover:text-red-500"
-                                onClick={() => handleRemoveItem(item.id)}
-                                title="Remove item"
-                                aria-label="Remove item"
-                              >
-                                <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
+                            <div className="text-right">
+                              <p className="text-sm font-medium text-gray-900">${(item.price * item.quantity).toFixed(2)}</p>
                             </div>
                           </div>
                         </li>
-                      ))}                    </ul>
+                      ))}
+                    </ul>
                   )}
                 </div>
               </div>
               
               <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-lg">
                 <div className="px-4 py-5 sm:px-6">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">Delivery Information</h3>
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">Delivery & Payment Information</h3>
                 </div>
                 <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
                   <form onSubmit={handleSubmit}>
                     <div className="space-y-6">
                       <div>
                         <label htmlFor="deliveryTime" className="block text-sm font-medium text-gray-700">
-                          Delivery Time
+                          Delivery Time *
                         </label>
                         <select
                           id="deliveryTime"
                           name="deliveryTime"
-                          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md bg-white text-gray-900 placeholder-gray-500"
                           value={deliveryTime}
                           onChange={(e) => setDeliveryTime(e.target.value)}
                           required
                         >
-                          <option value="">Select a delivery time</option>
+                          <option value="" className="text-gray-500">Select a delivery time</option>
                           {deliveryTimeOptions.map(option => (
-                            <option key={option.value} value={option.value}>
+                            <option key={option.value} value={option.value} className="text-gray-900">
                               {option.label}
                             </option>
                           ))}
@@ -254,7 +317,7 @@ const Checkout: React.FC = () => {
                             id="specialInstructions"
                             name="specialInstructions"
                             rows={3}
-                            className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                            className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-500"
                             placeholder="Any dietary preferences or delivery instructions"
                             value={specialInstructions}
                             onChange={(e) => setSpecialInstructions(e.target.value)}
@@ -263,10 +326,10 @@ const Checkout: React.FC = () => {
                       </div>
                       
                       <div>
-                        <label className="block text-sm font-medium text-gray-700">
-                          Payment Method
+                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                          Payment Method *
                         </label>
-                        <div className="mt-2 space-y-3">
+                        <div className="space-y-3">
                           <div className="flex items-center">
                             <input
                               id="hospital-account"
@@ -282,18 +345,151 @@ const Checkout: React.FC = () => {
                           </div>
                           <div className="flex items-center">
                             <input
-                              id="credit-card"
+                              id="cash"
                               name="paymentMethod"
                               type="radio"
-                              checked={paymentMethod === 'credit-card'}
-                              onChange={() => setPaymentMethod('credit-card')}
+                              checked={paymentMethod === 'cash'}
+                              onChange={() => setPaymentMethod('cash')}
                               className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300"
                             />
-                            <label htmlFor="credit-card" className="ml-3 block text-sm font-medium text-gray-700">
-                              Credit Card
+                            <label htmlFor="cash" className="ml-3 block text-sm font-medium text-gray-700">
+                              Cash on Delivery
+                            </label>
+                          </div>
+                          <div className="flex items-center">
+                            <input
+                              id="card"
+                              name="paymentMethod"
+                              type="radio"
+                              checked={paymentMethod === 'card'}
+                              onChange={() => setPaymentMethod('card')}
+                              className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300"
+                            />
+                            <label htmlFor="card" className="ml-3 block text-sm font-medium text-gray-700">
+                              Credit/Debit Card
                             </label>
                           </div>
                         </div>
+
+                        {/* Hospital Account Details */}
+                        {paymentMethod === 'hospital-account' && (
+                          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                            <div>
+                              <label htmlFor="hospitalAccountId" className="block text-sm font-medium text-gray-700">
+                                Hospital Account ID *
+                              </label>
+                              <input
+                                type="text"
+                                id="hospitalAccountId"
+                                value={hospitalAccountId}
+                                onChange={(e) => setHospitalAccountId(e.target.value)}
+                                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white text-gray-900 placeholder-gray-500"
+                                placeholder="Enter your hospital account ID"
+                                required
+                              />
+                            </div>
+                            <p className="mt-2 text-sm text-blue-600">
+                              Your meal will be charged to your hospital account and included in your final bill.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Cash Payment Info */}
+                        {paymentMethod === 'cash' && (
+                          <div className="mt-4 p-4 bg-green-50 rounded-lg">
+                            <p className="text-sm text-green-700">
+                              You will pay ${total.toFixed(2)} in cash when your meal is delivered to your room.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Card Payment Form */}
+                        {paymentMethod === 'card' && (
+                          <div className="mt-4 p-4 bg-gray-50 rounded-lg space-y-4">
+                            <div>
+                              <label htmlFor="cardholderName" className="block text-sm font-medium text-gray-700">
+                                Cardholder Name *
+                              </label>
+                              <input
+                                type="text"
+                                id="cardholderName"
+                                value={cardDetails.cardholderName}
+                                onChange={(e) => handleCardDetailsChange('cardholderName', e.target.value)}
+                                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white text-gray-900 placeholder-gray-500 font-medium"
+                                placeholder="Full name as shown on card"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label htmlFor="cardNumber" className="block text-sm font-medium text-gray-700">
+                                Card Number *
+                              </label>
+                              <input
+                                type="text"
+                                id="cardNumber"
+                                value={cardDetails.cardNumber}
+                                onChange={(e) => handleCardDetailsChange('cardNumber', e.target.value.replace(/\D/g, '').substring(0, 16))}
+                                className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white text-gray-900 placeholder-gray-500 font-mono tracking-widest"
+                                placeholder="1234 5678 9012 3456"
+                                required
+                              />
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                              <div>
+                                <label htmlFor="expiryMonth" className="block text-sm font-medium text-gray-700">
+                                  Month *
+                                </label>
+                                <select
+                                  id="expiryMonth"
+                                  value={cardDetails.expiryMonth}
+                                  onChange={(e) => handleCardDetailsChange('expiryMonth', e.target.value)}
+                                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white text-gray-900"
+                                  required
+                                >
+                                  <option value="" className="text-gray-500">MM</option>
+                                  {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                                    <option key={month} value={month.toString().padStart(2, '0')} className="text-gray-900">
+                                      {month.toString().padStart(2, '0')}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label htmlFor="expiryYear" className="block text-sm font-medium text-gray-700">
+                                  Year *
+                                </label>
+                                <select
+                                  id="expiryYear"
+                                  value={cardDetails.expiryYear}
+                                  onChange={(e) => handleCardDetailsChange('expiryYear', e.target.value)}
+                                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white text-gray-900"
+                                  required
+                                >
+                                  <option value="" className="text-gray-500">YYYY</option>
+                                  {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i).map(year => (
+                                    <option key={year} value={year.toString()} className="text-gray-900">
+                                      {year}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              <div>
+                                <label htmlFor="cvv" className="block text-sm font-medium text-gray-700">
+                                  CVV *
+                                </label>
+                                <input
+                                  type="text"
+                                  id="cvv"
+                                  value={cardDetails.cvv}
+                                  onChange={(e) => handleCardDetailsChange('cvv', e.target.value.replace(/\D/g, '').substring(0, 4))}
+                                  className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm bg-white text-gray-900 placeholder-gray-500 font-mono"
+                                  placeholder="123"
+                                  required
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </form>
@@ -316,6 +512,10 @@ const Checkout: React.FC = () => {
                       <dt className="text-sm text-gray-600">Delivery Fee</dt>
                       <dd className="text-sm font-medium text-gray-900">${deliveryFee.toFixed(2)}</dd>
                     </div>
+                    <div className="flex items-center justify-between">
+                      <dt className="text-sm text-gray-600">Tax (5%)</dt>
+                      <dd className="text-sm font-medium text-gray-900">${tax.toFixed(2)}</dd>
+                    </div>
                     <div className="border-t border-gray-200 pt-4 flex items-center justify-between">
                       <dt className="text-base font-medium text-gray-900">Total</dt>
                       <dd className="text-base font-medium text-indigo-600">${total.toFixed(2)}</dd>
@@ -331,14 +531,20 @@ const Checkout: React.FC = () => {
                           </svg>
                         </div>
                         <div className="ml-3 flex-1 md:flex md:justify-between">
-                          <p className="text-sm text-gray-500">
-                            Your meal will be delivered to Ward {user?.wardNumber}, Bed {user?.bedNumber}
-                          </p>
+                          <div>
+                            <p className="text-sm text-gray-500">
+                              Delivery to Ward {user?.wardNumber}, Bed {user?.bedNumber}
+                            </p>
+                            {deliveryTime && (
+                              <p className="text-sm font-medium text-gray-700 mt-1">
+                                Scheduled for: {deliveryTimeOptions.find(option => option.value === deliveryTime)?.displayTime || 'Invalid time'}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  
+                  </div>                  
                   <div className="mt-6">
                     <button
                       type="submit"
@@ -358,7 +564,7 @@ const Checkout: React.FC = () => {
                           </svg>
                           Processing...
                         </>
-                      ) : 'Place Order'}
+                      ) : `Pay ${total.toFixed(2)} - Place Order`}
                     </button>
                   </div>
                 </div>

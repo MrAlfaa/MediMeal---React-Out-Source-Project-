@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import axios from 'axios'
 import SuperadminSetup from './components/SuperadminSetup'
 import Login from './components/Login'
-import Dashboard from './components/Dashboard'
+import AdminDashboard from './components/AdminDashboard'
 import { AuthProvider } from './context/AuthContext'
 import PrivateRoute from './components/PrivateRoute'
 import './App.css'
@@ -101,10 +101,10 @@ function App() {
               <>
                 <Route path="/login" element={<Login />} />
                 <Route element={<PrivateRoute />}>
-                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<AdminDashboard />} />
                   <Route path="/" element={<Navigate to="/dashboard" />} />
                 </Route>
-                <Route path="*" element={<Navigate to="/login" />} />
+                <Route path="*" element={<Navigate to="/dashboard" />} />
               </>
             )}
           </Routes>
