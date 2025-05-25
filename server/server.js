@@ -28,6 +28,7 @@ const orderRoutes = require('./routes/orders');
 const adminOrderRoutes = require('./routes/adminOrders');
 const auth = require('./middleware/auth');
 const nutritionRoutes = require('./routes/nutrition');
+const userRoutes = require('./routes/user');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -35,6 +36,7 @@ app.use('/api/menu', menuRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/orders/admin', adminOrderRoutes);
 app.use('/api/nutrition', nutritionRoutes);
+app.use('/api/user', userRoutes);
 
 // Define basic route
 app.get('/', (req, res) => {
