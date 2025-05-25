@@ -25,12 +25,14 @@ mongoose.connect(process.env.MONGODB_URI)
 const authRoutes = require('./routes/auth');
 const menuRoutes = require('./routes/menu');
 const orderRoutes = require('./routes/orders');
+const adminOrderRoutes = require('./routes/adminOrders');
 const auth = require('./middleware/auth');
 
 // Use routes
 app.use('/api/auth', authRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/orders/admin', adminOrderRoutes);
 
 // Define basic route
 app.get('/', (req, res) => {
@@ -86,6 +88,7 @@ app.use((err, req, res, next) => {
     error: process.env.NODE_ENV === 'production' ? 'Server error' : err.message
   });
 });
+
 // 404 handler for unmatched routes
 app.use((req, res) => {
   console.log(`Route not found: ${req.method} ${req.originalUrl}`);

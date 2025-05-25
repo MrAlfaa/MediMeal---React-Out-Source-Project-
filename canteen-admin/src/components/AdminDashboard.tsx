@@ -1,13 +1,40 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import Sidebar from './Sidebar';
 import MenuManagement from './MenuManagement';
+import OrderManagement from './OrderManagement';
+import orderService from '../services/orderService';
 
 const AdminDashboard: React.FC = () => {
   const { user, logout } = useContext(AuthContext);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activePage, setActivePage] = useState('dashboard');
+  const [dashboardStats, setDashboardStats] = useState({
+    totalMenuItems: 24,
+    todayOrders: 0,
+    totalUsers: 156,
+    todayRevenue: 0
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const stats = await orderService.getOrderStats();
+        setDashboardStats(prev => ({
+          ...prev,
+          todayOrders: stats.todayOrders,
+          todayRevenue: stats.todayRevenue
+        }));
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+      }
+    };
+
+    if (activePage === 'dashboard') {
+      fetchStats();
+    }
+  }, [activePage]);
 
   const navigation = [
     { name: 'Dashboard', id: 'dashboard', icon: '📊', color: 'blue' },
@@ -22,6 +49,8 @@ const AdminDashboard: React.FC = () => {
     switch (activePage) {
       case 'menu':
         return <MenuManagement />;
+      case 'orders':
+        return <OrderManagement />;
       case 'dashboard':
         return (
           <div className="p-6">
@@ -45,7 +74,7 @@ const AdminDashboard: React.FC = () => {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-500">Today's Orders</p>
-                    <p className="text-2xl font-semibold text-gray-900">12</p>
+                    <p className="text-2xl font-semibold text-gray-900">{dashboardStats.todayOrders}</p>
                   </div>
                 </div>
               </div>
@@ -67,7 +96,7 @@ const AdminDashboard: React.FC = () => {
                   </div>
                   <div className="ml-4">
                     <p className="text-sm font-medium text-gray-500">Revenue Today</p>
-                    <p className="text-2xl font-semibold text-gray-900">$1,234</p>
+                    <p className="text-2xl font-semibold text-gray-900">${dashboardStats.todayRevenue.toFixed(2)}</p>
                   </div>
                 </div>
               </div>

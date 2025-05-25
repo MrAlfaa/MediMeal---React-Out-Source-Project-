@@ -53,7 +53,7 @@ const orderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'preparing', 'ready', 'delivered', 'cancelled'],
+    enum: ['pending', 'accepted', 'processing', 'ready', 'delivered', 'cancelled'],
     default: 'pending'
   },
   deliveryDetails: {
@@ -135,6 +135,7 @@ const orderSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
 // Generate order number before saving
 orderSchema.pre('save', function(next) {
   if (this.isNew && !this.orderNumber) {
