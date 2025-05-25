@@ -1,98 +1,113 @@
 import axios from 'axios';
 
-export interface AnalyticsData {
-  orderTrends: Array<{ name: string; value: number; date: string }>;
-  categoryStats: Array<{ name: string; value: number; revenue: number }>;
-  statusBreakdown: Array<{ name: string; value: number; color: string }>;
-  revenueGrowth: {
-    current: number;
-    previous: number;
-    percentage: number;
+export interface SalesData {
+  date: string;
+  revenue: number;
+  orders: number;
+  avgOrderValue: number;
+}
+
+export interface SalesAnalytics {
+  salesData: SalesData[];
+  summary: {
+    totalRevenue: number;
+    totalOrders: number;
+    avgOrderValue: number;
   };
-  topMenuItems: Array<{
+}
+
+export interface MenuPerformance {
+  topItems: Array<{
+    id: string;
     name: string;
+    category: string;
+    quantity: number;
+    revenue: number;
+    orders: number;
+  }>;
+  categoryPerformance: Array<{
+    category: string;
+    quantity: number;
+    revenue: number;
+    orders: number;
+  }>;
+}
+
+export interface CustomerAnalytics {
+  topCustomers: Array<{
+    id: string;
+    name: string;
+    email: string;
+    ward: string;
+    bed: string;
+    totalOrders: number;
+    totalSpent: number;
+    avgOrderValue: number;
+  }>;
+  wardAnalytics: Array<{
+    ward: string;
     orders: number;
     revenue: number;
-    category: string;
   }>;
-  userGrowth: Array<{ name: string; value: number }>;
+}
+
+export interface OrderAnalytics {
+  statusBreakdown: Array<{
+    status: string;
+    count: number;
+  }>;
+  hourlyTrends: Array<{
+    hour: number;
+    orders: number;
+    revenue: number;
+  }>;
+  paymentMethods: Array<{
+    method: string;
+    count: number;
+    amount: number;
+  }>;
+}
+
+export interface ReportData {
+  reportGenerated: string;
+  period: string;
+  dateRange: {
+    start: string;
+    end: string;
+  };
+  summary: {
+    totalRevenue: number;
+    totalOrders: number;
+    averageOrderValue: number;
+    totalMenuItems: number;
+    totalUsers: number;
+  };
+  topMenuItems: any[];
+  orderStatusBreakdown: any[];
+  userRoleBreakdown: any[];
 }
 
 class AnalyticsService {
   private baseURL = '/analytics';
 
-  async getDashboardAnalytics(days: number = 7): Promise<AnalyticsData> {
+  async getSalesAnalytics(period: string = '30d', startDate?: string, endDate?: string): Promise<SalesAnalytics> {
     try {
-      const response = await axios.get(`${this.baseURL}/dashboard?days=${days}`);
+      const params = new URLSearchParams();
+      params.append('period', period);
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+
+      const response = await axios.get(`${this.baseURL}/sales?${params}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching analytics:', error);
-      // Return mock data if API fails
-      return this.getMockAnalyticsData();
-    }
-  }
-
-  private getMockAnalyticsData(): AnalyticsData {
-    return {
-      orderTrends: [
-        { name: 'Mon', value: 24, date: '2024-01-15' },
-        { name: 'Tue', value: 32, date: '2024-01-16' },
-        { name: 'Wed', value: 28, date: '2024-01-17' },
-        { name: 'Thu', value: 45, date: '2024-01-18' },
-        { name: 'Fri', value: 38, date: '2024-01-19' },
-        { name: 'Sat', value: 29, date: '2024-01-20' },
-        { name: 'Sun', value: 19, date: '2024-01-21' }
-      ],
-      categoryStats: [
-        { name: 'Main Courses', value: 45, revenue: 1250 },
-        { name: 'Breakfast', value: 32, revenue: 890 },
-        { name: 'Beverages', value: 28, revenue: 560 },
-        { name: 'Desserts', value: 15, revenue: 340 },
-        { name: 'Snacks', value: 22, revenue: 480 }
-      ],
-      statusBreakdown: [
-        { name: 'Delivered', value: 145, color: '#10B981' },
-        { name: 'Processing', value: 23, color: '#3B82F6' },
-        { name: 'Pending', value: 12, color: '#F59E0B' },
-        { name: 'Ready', value: 8, color: '#8B5CF6' },
-        { name: 'Cancelled', value: 3, color: '#EF4444' }
-      ],
-      revenueGrowth: {
-        current: 3520,
-        previous: 2890,
-        percentage: 21.8
-      },
-      topMenuItems: [
-        { name: 'Grilled Chicken', orders: 45, revenue: 675, category: 'Main Courses' },
-        { name: 'Caesar Salad', orders: 32, revenue: 384, category: 'Salads' },
-        { name: 'Chocolate Cake', orders: 28, revenue: 420, category: 'Desserts' },
-        { name: 'Orange Juice', orders: 35, revenue: 175, category: 'Beverages' },
-        { name: 'Vegetable Soup', orders: 25, revenue: 250, category: 'Soups' }
-      ],
-      userGrowth: [
-        { name: 'Jan', value: 120 },
-        { name: 'Feb', value: 135 },
-        { name: 'Mar', value: 142 },
-        { name: 'Apr', value: 156 },
-        { name: 'May', value: 168 },
-        { name: 'Jun', value: 175 }
-      ]
-    };
-  }
-
-  async getRevenueAnalytics(period: 'week' | 'month' | 'quarter' | 'year') {
-    try {
-      const response = await axios.get(`${this.baseURL}/revenue?period=${period}`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching revenue analytics:', error);
+      console.error('Error fetching sales analytics:', error);
       throw error;
     }
   }
 
-  async getMenuPerformance() {
+  async getMenuPerformance(period: string = '30d'): Promise<MenuPerformance> {
     try {
-      const response = await axios.get(`${this.baseURL}/menu-performance`);
+      const response = await axios.get(`${this.baseURL}/menu-performance?period=${period}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching menu performance:', error);
@@ -100,12 +115,58 @@ class AnalyticsService {
     }
   }
 
-  async getCustomerInsights() {
+  async getCustomerAnalytics(period: string = '30d'): Promise<CustomerAnalytics> {
     try {
-      const response = await axios.get(`${this.baseURL}/customer-insights`);
+      const response = await axios.get(`${this.baseURL}/customers?period=${period}`);
       return response.data;
     } catch (error) {
-      console.error('Error fetching customer insights:', error);
+      console.error('Error fetching customer analytics:', error);
+      throw error;
+    }
+  }
+
+  async getOrderAnalytics(period: string = '30d'): Promise<OrderAnalytics> {
+    try {
+      const response = await axios.get(`${this.baseURL}/orders?period=${period}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching order analytics:', error);
+      throw error;
+    }
+  }
+
+  async generateReport(format: 'json' | 'pdf' = 'json', period: string = '30d', startDate?: string, endDate?: string): Promise<ReportData | Blob> {
+    try {
+      const params = new URLSearchParams();
+      params.append('format', format);
+      params.append('period', period);
+      if (startDate) params.append('startDate', startDate);
+      if (endDate) params.append('endDate', endDate);
+
+      const response = await axios.get(`${this.baseURL}/report?${params}`, {
+        responseType: format === 'pdf' ? 'blob' : 'json'
+      });
+
+      return response.data;
+    } catch (error) {
+      console.error('Error generating report:', error);
+      throw error;
+    }
+  }
+
+  async downloadReport(period: string = '30d', startDate?: string, endDate?: string): Promise<void> {
+    try {
+      const blob = await this.generateReport('pdf', period, startDate, endDate) as Blob;
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `medimeal-report-${Date.now()}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading report:', error);
       throw error;
     }
   }

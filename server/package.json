@@ -16,7 +16,8 @@
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^7.0.3",
     "multer": "^2.0.0",
-    "multer-storage-cloudinary": "^4.0.0"
+    "multer-storage-cloudinary": "^4.0.0",
+    "pdfkit": "^0.17.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.22"

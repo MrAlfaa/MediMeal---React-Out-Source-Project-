@@ -3,6 +3,7 @@ const Order = require('../models/Order');
 const MenuItem = require('../models/MenuItem');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const PDFDocument = require('pdfkit');
 const router = express.Router();
 
 // Middleware to check admin role
@@ -13,47 +14,260 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-// Get dashboard analytics
-router.get('/dashboard', auth, requireAdmin, async (req, res) => {
+// Get sales analytics
+router.get('/sales', auth, requireAdmin, async (req, res) => {
   try {
-    const { days = 7 } = req.query;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - parseInt(days));
+    const { period = '7d', startDate, endDate } = req.query;
     
-    // Order trends
-    const orderTrends = await Order.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: startDate }
+    let dateFilter = {};
+    const now = new Date();
+    
+    if (startDate && endDate) {
+      dateFilter = {
+        createdAt: {
+          $gte: new Date(startDate),
+          $lte: new Date(endDate)
         }
-      },
+      };
+    } else {
+      switch (period) {
+        case '24h':
+          dateFilter.createdAt = { $gte: new Date(now - 24 * 60 * 60 * 1000) };
+          break;
+        case '7d':
+          dateFilter.createdAt = { $gte: new Date(now - 7 * 24 * 60 * 60 * 1000) };
+          break;
+        case '30d':
+          dateFilter.createdAt = { $gte: new Date(now - 30 * 24 * 60 * 60 * 1000) };
+          break;
+        case '90d':
+          dateFilter.createdAt = { $gte: new Date(now - 90 * 24 * 60 * 60 * 1000) };
+          break;
+      }
+    }
+
+    const salesData = await Order.aggregate([
+      { $match: { ...dateFilter, "paymentDetails.status": "completed" } },
       {
         $group: {
           _id: {
             $dateToString: { format: "%Y-%m-%d", date: "$createdAt" }
           },
-          count: { $sum: 1 },
-          revenue: { $sum: "$totalAmount" }
+          totalRevenue: { $sum: "$totalAmount" },
+          orderCount: { $sum: 1 },
+          avgOrderValue: { $avg: "$totalAmount" }
+        }
+      },
+      { $sort: { "_id": 1 } }
+    ]);
+
+    const totalStats = await Order.aggregate([
+      { $match: { ...dateFilter, "paymentDetails.status": "completed" } },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: "$totalAmount" },
+          totalOrders: { $sum: 1 },
+          avgOrderValue: { $avg: "$totalAmount" }
+        }
+      }
+    ]);
+
+    res.json({
+      salesData: salesData.map(item => ({
+        date: item._id,
+        revenue: item.totalRevenue,
+        orders: item.orderCount,
+        avgOrderValue: item.avgOrderValue
+      })),
+      summary: totalStats[0] || { totalRevenue: 0, totalOrders: 0, avgOrderValue: 0 }
+    });
+  } catch (error) {
+    console.error('Error fetching sales analytics:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get menu performance analytics
+router.get('/menu-performance', auth, requireAdmin, async (req, res) => {
+  try {
+    const { period = '30d' } = req.query;
+    
+    let dateFilter = {};
+    const now = new Date();
+    
+    switch (period) {
+      case '7d':
+        dateFilter.createdAt = { $gte: new Date(now - 7 * 24 * 60 * 60 * 1000) };
+        break;
+      case '30d':
+        dateFilter.createdAt = { $gte: new Date(now - 30 * 24 * 60 * 60 * 1000) };
+        break;
+      case '90d':
+        dateFilter.createdAt = { $gte: new Date(now - 90 * 24 * 60 * 60 * 1000) };
+        break;
+    }
+
+    const menuPerformance = await Order.aggregate([
+      { $match: dateFilter },
+      { $unwind: "$items" },
+      {
+        $group: {
+          _id: "$items.menuItem",
+          name: { $first: "$items.name" },
+          category: { $first: "$items.category" },
+          totalQuantity: { $sum: "$items.quantity" },
+          totalRevenue: { $sum: { $multiply: ["$items.quantity", "$items.price"] } },
+          orderCount: { $sum: 1 }
+        }
+      },
+      { $sort: { totalQuantity: -1 } }
+    ]);
+
+    const categoryPerformance = await Order.aggregate([
+      { $match: dateFilter },
+      { $unwind: "$items" },
+      {
+        $group: {
+          _id: "$items.category",
+          totalQuantity: { $sum: "$items.quantity" },
+          totalRevenue: { $sum: { $multiply: ["$items.quantity", "$items.price"] } },
+          orderCount: { $sum: 1 }
+        }
+      },
+      { $sort: { totalRevenue: -1 } }
+    ]);
+
+    res.json({
+      topItems: menuPerformance.slice(0, 10).map(item => ({
+        id: item._id,
+        name: item.name,
+        category: item.category,
+        quantity: item.totalQuantity,
+        revenue: item.totalRevenue,
+        orders: item.orderCount
+      })),
+      categoryPerformance: categoryPerformance.map(cat => ({
+        category: cat._id,
+        quantity: cat.totalQuantity,
+        revenue: cat.totalRevenue,
+        orders: cat.orderCount
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching menu performance:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get customer analytics
+router.get('/customers', auth, requireAdmin, async (req, res) => {
+  try {
+    const { period = '30d' } = req.query;
+    
+    let dateFilter = {};
+    const now = new Date();
+    
+    switch (period) {
+      case '7d':
+        dateFilter.createdAt = { $gte: new Date(now - 7 * 24 * 60 * 60 * 1000) };
+        break;
+      case '30d':
+        dateFilter.createdAt = { $gte: new Date(now - 30 * 24 * 60 * 60 * 1000) };
+        break;
+      case '90d':
+        dateFilter.createdAt = { $gte: new Date(now - 90 * 24 * 60 * 60 * 1000) };
+        break;
+    }
+
+    const customerStats = await Order.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: "$user",
+          totalOrders: { $sum: 1 },
+          totalSpent: { $sum: "$totalAmount" },
+          avgOrderValue: { $avg: "$totalAmount" }
         }
       },
       {
-        $sort: { "_id": 1 }
-      }
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "userInfo"
+        }
+      },
+      { $unwind: "$userInfo" },
+      { $sort: { totalSpent: -1 } }
     ]);
 
-    // Category statistics from menu items
-    const categoryStats = await MenuItem.aggregate([
+    const wardAnalytics = await Order.aggregate([
+      { $match: dateFilter },
+      {
+        $lookup: {
+          from: "users",
+          localField: "user",
+          foreignField: "_id",
+          as: "userInfo"
+        }
+      },
+      { $unwind: "$userInfo" },
       {
         $group: {
-          _id: "$category",
-          count: { $sum: 1 },
-          avgPrice: { $avg: "$price" }
+          _id: "$userInfo.wardNumber",
+          totalOrders: { $sum: 1 },
+          totalRevenue: { $sum: "$totalAmount" }
         }
-      }
+      },
+      { $sort: { totalOrders: -1 } }
     ]);
 
-    // Status breakdown
-    const statusBreakdown = await Order.aggregate([
+    res.json({
+      topCustomers: customerStats.slice(0, 10).map(customer => ({
+        id: customer._id,
+        name: customer.userInfo.fullName,
+        email: customer.userInfo.email,
+        ward: customer.userInfo.wardNumber,
+        bed: customer.userInfo.bedNumber,
+        totalOrders: customer.totalOrders,
+        totalSpent: customer.totalSpent,
+        avgOrderValue: customer.avgOrderValue
+      })),
+      wardAnalytics: wardAnalytics.map(ward => ({
+        ward: ward._id,
+        orders: ward.totalOrders,
+        revenue: ward.totalRevenue
+      }))
+    });
+  } catch (error) {
+    console.error('Error fetching customer analytics:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get order analytics
+router.get('/orders', auth, requireAdmin, async (req, res) => {
+  try {
+    const { period = '30d' } = req.query;
+    
+    let dateFilter = {};
+    const now = new Date();
+    
+    switch (period) {
+      case '7d':
+        dateFilter.createdAt = { $gte: new Date(now - 7 * 24 * 60 * 60 * 1000) };
+        break;
+      case '30d':
+        dateFilter.createdAt = { $gte: new Date(now - 30 * 24 * 60 * 60 * 1000) };
+        break;
+      case '90d':
+        dateFilter.createdAt = { $gte: new Date(now - 90 * 24 * 60 * 60 * 1000) };
+        break;
+    }
+
+    const statusAnalytics = await Order.aggregate([
+      { $match: dateFilter },
       {
         $group: {
           _id: "$status",
@@ -62,214 +276,189 @@ router.get('/dashboard', auth, requireAdmin, async (req, res) => {
       }
     ]);
 
-    // Revenue growth calculation
-    const currentPeriodRevenue = await Order.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: startDate },
-          "paymentDetails.status": "completed"
-        }
-      },
+    const hourlyAnalytics = await Order.aggregate([
+      { $match: dateFilter },
       {
         $group: {
-          _id: null,
-          total: { $sum: "$totalAmount" }
+          _id: { $hour: "$createdAt" },
+          orderCount: { $sum: 1 },
+          totalRevenue: { $sum: "$totalAmount" }
+        }
+      },
+      { $sort: { "_id": 1 } }
+    ]);
+
+    const paymentMethodAnalytics = await Order.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: "$paymentDetails.method",
+          count: { $sum: 1 },
+          totalAmount: { $sum: "$totalAmount" }
         }
       }
     ]);
-
-    const previousStartDate = new Date(startDate);
-    previousStartDate.setDate(previousStartDate.getDate() - parseInt(days));
-    
-    const previousPeriodRevenue = await Order.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: previousStartDate, $lt: startDate },
-          "paymentDetails.status": "completed"
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: "$totalAmount" }
-        }
-      }
-    ]);
-
-    // Top menu items
-    const topMenuItems = await Order.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: startDate }
-        }
-      },
-      {
-        $unwind: "$items"
-      },
-      {
-        $group: {
-          _id: "$items.name",
-          orders: { $sum: "$items.quantity" },
-          revenue: { $sum: { $multiply: ["$items.quantity", "$items.price"] } },
-          category: { $first: "$items.category" }
-        }
-      },
-      {
-        $sort: { orders: -1 }
-      },
-      {
-        $limit: 10
-      }
-    ]);
-
-    // User growth (last 6 months)
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    
-    const userGrowth = await User.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: sixMonthsAgo }
-        }
-      },
-      {
-        $group: {
-          _id: {
-            $dateToString: { format: "%Y-%m", date: "$createdAt" }
-          },
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $sort: { "_id": 1 }
-      }
-    ]);
-
-    const currentRevenue = currentPeriodRevenue[0]?.total || 0;
-    const previousRevenue = previousPeriodRevenue[0]?.total || 0;
-    const revenueGrowthPercentage = previousRevenue > 0 
-      ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 
-      : 0;
 
     res.json({
-      orderTrends: orderTrends.map(trend => ({
-        name: new Date(trend._id).toLocaleDateString('en-US', { weekday: 'short' }),
-        value: trend.count,
-        date: trend._id,
-        revenue: trend.revenue
+      statusBreakdown: statusAnalytics.map(status => ({
+        status: status._id,
+        count: status.count
       })),
-      categoryStats: categoryStats.map(cat => ({
-        name: cat._id,
-        value: cat.count,
-        avgPrice: cat.avgPrice
+      hourlyTrends: hourlyAnalytics.map(hour => ({
+        hour: hour._id,
+        orders: hour.orderCount,
+        revenue: hour.totalRevenue
       })),
-      statusBreakdown: statusBreakdown.map(status => ({
-        name: status._id,
-        value: status.count
-      })),
-      revenueGrowth: {
-        current: currentRevenue,
-        previous: previousRevenue,
-        percentage: revenueGrowthPercentage
-      },
-      topMenuItems: topMenuItems.map(item => ({
-        name: item._id,
-        orders: item.orders,
-        revenue: item.revenue,
-        category: item.category
-      })),
-      userGrowth: userGrowth.map(growth => ({
-        name: new Date(growth._id + '-01').toLocaleDateString('en-US', { month: 'short' }),
-        value: growth.count
+      paymentMethods: paymentMethodAnalytics.map(method => ({
+        method: method._id,
+        count: method.count,
+        amount: method.totalAmount
       }))
     });
-
   } catch (error) {
-    console.error('Error fetching dashboard analytics:', error);
+    console.error('Error fetching order analytics:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// Get revenue analytics
-router.get('/revenue', auth, requireAdmin, async (req, res) => {
+// Generate comprehensive report
+router.get('/report', auth, requireAdmin, async (req, res) => {
   try {
-    const { period = 'week' } = req.query;
-    let startDate = new Date();
+    const { format = 'json', startDate, endDate, period = '30d' } = req.query;
     
-    switch (period) {
-      case 'week':
-        startDate.setDate(startDate.getDate() - 7);
-        break;
-      case 'month':
-        startDate.setMonth(startDate.getMonth() - 1);
-        break;
-      case 'quarter':
-        startDate.setMonth(startDate.getMonth() - 3);
-        break;
-      case 'year':
-        startDate.setFullYear(startDate.getFullYear() - 1);
-        break;
+    let dateFilter = {};
+    const now = new Date();
+    
+    if (startDate && endDate) {
+      dateFilter = {
+        createdAt: {
+          $gte: new Date(startDate),
+          $lte: new Date(endDate)
+        }
+      };
+    } else {
+      switch (period) {
+        case '7d':
+          dateFilter.createdAt = { $gte: new Date(now - 7 * 24 * 60 * 60 * 1000) };
+          break;
+        case '30d':
+          dateFilter.createdAt = { $gte: new Date(now - 30 * 24 * 60 * 60 * 1000) };
+          break;
+        case '90d':
+          dateFilter.createdAt = { $gte: new Date(now - 90 * 24 * 60 * 60 * 1000) };
+          break;
+      }
     }
 
-    const revenueData = await Order.aggregate([
-      {
-        $match: {
-          createdAt: { $gte: startDate },
-          "paymentDetails.status": "completed"
+    // Fetch all analytics data
+    const [salesStats, menuStats, orderStats, userStats] = await Promise.all([
+      // Sales stats
+      Order.aggregate([
+        { $match: { ...dateFilter, "paymentDetails.status": "completed" } },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: "$totalAmount" },
+            totalOrders: { $sum: 1 },
+            avgOrderValue: { $avg: "$totalAmount" }
+          }
         }
-      },
-      {
-        $group: {
-          _id: {
-            $dateToString: { 
-              format: period === 'year' ? "%Y-%m" : "%Y-%m-%d", 
-              date: "$createdAt" 
-            }
-          },
-          revenue: { $sum: "$totalAmount" },
-          orders: { $sum: 1 }
+      ]),
+      
+      // Menu stats
+      Order.aggregate([
+        { $match: dateFilter },
+        { $unwind: "$items" },
+        {
+          $group: {
+            _id: "$items.name",
+            category: { $first: "$items.category" },
+            totalQuantity: { $sum: "$items.quantity" },
+            totalRevenue: { $sum: { $multiply: ["$items.quantity", "$items.price"] } }
+          }
+        },
+        { $sort: { totalQuantity: -1 } },
+        { $limit: 10 }
+      ]),
+      
+      // Order stats
+      Order.aggregate([
+        { $match: dateFilter },
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 }
+          }
         }
-      },
-      {
-        $sort: { "_id": 1 }
-      }
+      ]),
+      
+      // User stats
+      User.aggregate([
+        { $match: dateFilter },
+        {
+          $group: {
+            _id: "$role",
+            count: { $sum: 1 }
+          }
+        }
+      ])
     ]);
 
-    res.json(revenueData);
-  } catch (error) {
-    console.error('Error fetching revenue analytics:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
+    const reportData = {
+      reportGenerated: new Date().toISOString(),
+      period: period,
+      dateRange: {
+        start: startDate || (period === '7d' ? new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString() : 
+               period === '30d' ? new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString() :
+               new Date(now - 90 * 24 * 60 * 60 * 1000).toISOString()),
+        end: endDate || now.toISOString()
+      },
+      summary: {
+        totalRevenue: salesStats[0]?.totalRevenue || 0,
+        totalOrders: salesStats[0]?.totalOrders || 0,
+        averageOrderValue: salesStats[0]?.avgOrderValue || 0,
+        totalMenuItems: await MenuItem.countDocuments(),
+        totalUsers: await User.countDocuments({ role: { $in: ['user', 'patient'] } })
+      },
+      topMenuItems: menuStats,
+      orderStatusBreakdown: orderStats,
+      userRoleBreakdown: userStats
+    };
 
-// Get menu performance analytics
-router.get('/menu-performance', auth, requireAdmin, async (req, res) => {
-  try {
-    const menuPerformance = await Order.aggregate([
-      {
-        $unwind: "$items"
-      },
-      {
-        $group: {
-          _id: "$items.menuItem",
-          name: { $first: "$items.name" },
-          category: { $first: "$items.category" },
-          totalOrders: { $sum: "$items.quantity" },
-          totalRevenue: { $sum: { $multiply: ["$items.quantity", "$items.price"] } },
-          avgRating: { $avg: 4.2 } // Mock rating - would come from reviews
-        }
-      },
-      {
-        $sort: { totalRevenue: -1 }
-      },
-      {
-        $limit: 20
-      }
-    ]);
-
-    res.json(menuPerformance);
+    if (format === 'pdf') {
+      // Generate PDF report
+      const doc = new PDFDocument();
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename=medimeal-report-${Date.now()}.pdf`);
+      
+      doc.pipe(res);
+      
+      // PDF content
+      doc.fontSize(20).text('MediMeal Analytics Report', 50, 50);
+      doc.fontSize(12).text(`Generated: ${new Date().toLocaleDateString()}`, 50, 80);
+      doc.text(`Period: ${period}`, 50, 100);
+      
+      doc.fontSize(16).text('Summary', 50, 140);
+      doc.fontSize(12);
+      doc.text(`Total Revenue: $${reportData.summary.totalRevenue.toFixed(2)}`, 50, 170);
+      doc.text(`Total Orders: ${reportData.summary.totalOrders}`, 50, 190);
+      doc.text(`Average Order Value: $${reportData.summary.averageOrderValue.toFixed(2)}`, 50, 210);
+      doc.text(`Total Menu Items: ${reportData.summary.totalMenuItems}`, 50, 230);
+      doc.text(`Total Users: ${reportData.summary.totalUsers}`, 50, 250);
+      
+      doc.fontSize(16).text('Top Menu Items', 50, 290);
+      let yPos = 320;
+      reportData.topMenuItems.forEach((item, index) => {
+        doc.fontSize(12).text(`${index + 1}. ${item._id} - Qty: ${item.totalQuantity}, Revenue: $${item.totalRevenue.toFixed(2)}`, 50, yPos);
+        yPos += 20;
+      });
+      
+      doc.end();
+    } else {
+      res.json(reportData);
+    }
   } catch (error) {
-    console.error('Error fetching menu performance:', error);
+    console.error('Error generating report:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
